@@ -162,6 +162,7 @@ void NVIC_Configuration(void)
 }
 
 extern void wifi_init(void);
+extern void key_read_wifi_info(void);
 
 void  BSP_Init (void)
 {
@@ -169,6 +170,8 @@ void  BSP_Init (void)
 	EXTI_Config();
 	NVIC_Configuration();
 
+	key_read_wifi_info();
+	
 	LED_Init();
 	sleep(1);
 	uart_inint();

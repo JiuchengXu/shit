@@ -46,15 +46,17 @@ void uart_puts(char *str)
 
 static char uart_recieve(void)
 {
-	char c =  RxBuf[r_start++];
-	
-	RxBuf[r_start - 1] = 0;
-	
-	if (r_start == BUF_LENGTH)
-		r_start = 0;
+	char c;
 	
 	if (r_start == w_index)
 		return '\0';
+
+	c = RxBuf[r_start];
+	
+	RxBuf[r_start++] = 0;
+	
+	if (r_start == BUF_LENGTH)
+		r_start = 0;
 	
 	return c;
 }

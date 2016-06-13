@@ -3,10 +3,15 @@
 #include "net.h"
 #include "bus.h"
 
+#define GUN_IP		"192.168.4.2"
+#define LCD_IP		"192.168.4.3"
+#define LOCAL_PORT_BASE		8888
+#define DST_PORT			LOCAL_PORT_BASE
+
 char temp[100];
 char output[100];
-static int gID = 0;
-static int local_port_based=8888;
+static int gID;
+static int local_port_based = LOCAL_PORT_BASE;
 
 void err_log(char *s)
 {
@@ -14,6 +19,11 @@ void err_log(char *s)
 }
 
 int close_udp(int id);
+extern int key_get_sid(char *sid);
+extern int key_get_passwd(char *passwd);
+extern int key_get_host_sid(char *sid);
+extern int key_get_host_passwd(char *passwd);
+extern int key_get_server_ip(char *ip);
 
 void bus_send_string(char *buf)
 {
@@ -57,7 +67,7 @@ int set_mode(int mode)
 	sprintf(temp, "AT+CWMODE=%d\r\n", mode);
 	bus_send_string(temp);
 	
-	msleep(20);
+	msleep(200);
 	
 	bus_recieve_string(output);
 	
@@ -69,7 +79,7 @@ int set_show_ip(int mode)
 	sprintf(temp, "AT+CIPDINFO=%d\r\n", mode);
 	bus_send_string(temp);
 		
-	msleep(20);
+	msleep(200);
 	
 	bus_recieve_string(output);
 	
@@ -93,7 +103,19 @@ int set_auto_conn(int i)
 	sprintf(temp, "AT+CWAUTOCONN=%d\r\n", i);
 	bus_send_string(temp);
 	
-	msleep(20);
+	msleep(200);
+	
+	bus_recieve_string(output);
+	
+	return str_include(output, "OK");	
+}
+
+int set_ap(char *sid, char *passwd)
+{
+	sprintf(temp, "AT+CWJAP=\"%s\",\"%s\"\r\n", sid, passwd);
+	bus_send_string(temp);
+	
+	msleep(200);
 	
 	bus_recieve_string(output);
 	
@@ -105,7 +127,7 @@ int set_echo(int on)
 	sprintf(temp, "ATE%d\r\n", on);
 	bus_send_string(temp);
 	
-	msleep(20);
+	msleep(200);
 	
 	bus_recieve_string(output);
 	
@@ -117,7 +139,7 @@ int set_mux(int mode)
 	sprintf(temp, "AT+CIPMUX=%d\r\n", mode);
 	bus_send_string(temp);
 	
-	msleep(20);
+	msleep(200);
 	
 	bus_recieve_string(output);
 	
@@ -129,7 +151,7 @@ int udp_setup(char *ip, int dst_port)
 	sprintf(temp, "AT+CIPSTART=%d,\"UDP\",\"%s\",%d,%d,2\r\n", gID++, ip, local_port_based++, dst_port);
 	bus_send_string(temp);
 	
-	msleep(20);
+	msleep(200);
 	
 	bus_recieve_string(output);
 	
@@ -212,7 +234,7 @@ int recieve_data(char *ip, int port, char *data)
 			continue;
 		}
 		
-		tmp += 5;
+		tmp += 4;
 		
 		//id is from '0' to '9'
 		if ((char)((char)id + '0') == *tmp)
@@ -230,7 +252,7 @@ int recieve_data(char *ip, int port, char *data)
 	return len;
 }
 
-int close_udp(int id)
+int udp_close(int id)
 {
 	sprintf(temp, "AT+CIPCLOSE=%d\r\n", id);
 	bus_send_string(temp);
@@ -242,16 +264,15 @@ int close_udp(int id)
 	return str_include(output, "OK");
 }
 
-
 char data_i[100];
 
 void send_test(void)
 {
-	char ip[] = "192.168.1.20";
+	char ip[] = "192.168.4.3";
 	int port = 8888;
 	char data[] = "hello world!";
 
-	close_udp(0);
+	udp_close(0);
 	
 	if (udp_setup(ip, port) < 0)
 		err_log("udp_setup");
@@ -263,19 +284,36 @@ void send_test(void)
 
 void wifi_init(void)
 {
+	int i;
+	
+	char sid[20], passwd[20], host[20], host_passwd[20];
+	
+	key_get_sid(sid);
+	key_get_passwd(passwd);
+	key_get_host_sid(host);
+	key_get_host_passwd(host_passwd);
+	
 	if (set_echo(0) < 0)
 		err_log("set_echo");
 	
 	if (set_mode(3) < 0)
 		err_log("set_mode");
 	
-	if (connect_ap("1103", "Q!W@E#r4", 3) < 0)
+	if (connect_ap(host, host_passwd, 3) < 0)
 		err_log("connect_ap");
+	
+	if (set_ap(sid, passwd) < 0)
+		err_log("set_ap");
 	
 	if (set_mux(1) < 0)
 		err_log("set_mux");
 	
-	send_test();
+	for (i = 0; i < 10; i++)
+		udp_close(i);
+	
+	udp_setup(GUN_IP, DST_PORT);
+	udp_setup(LCD_IP, DST_PORT);
+	\
 	
 	register_net_ops(send_data, recieve_data);
 }
