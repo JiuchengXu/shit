@@ -3,31 +3,34 @@
 #include "net.h"
 #include "bus.h"
 
-#define GUN_IP		"192.168.4.2"
-#define LCD_IP		"192.168.4.3"
-#define LOCAL_PORT_BASE		8888
-#define DST_PORT			LOCAL_PORT_BASE
 
 char temp[100];
 char output[100];
-static int gID;
-static int local_port_based = LOCAL_PORT_BASE;
+static u8 gID;
+
+struct ip_port_map {
+	u32 ip;
+	u16 remote_port;
+	u16 local_port;
+};
+
+struct ip_port_map ip_map[5];
 
 void err_log(char *s)
 {
 	
 }
 
-int close_udp(int id);
-extern int key_get_sid(char *sid);
-extern int key_get_passwd(char *passwd);
-extern int key_get_host_sid(char *sid);
-extern int key_get_host_passwd(char *passwd);
-extern int key_get_server_ip(char *ip);
+s8 close_udp(u8 id);
+extern s8 key_get_sid(char *sid);
+extern s8 key_get_passwd(char *passwd);
+extern s8 key_get_host_sid(char *sid);
+extern s8 key_get_host_passwd(char *passwd);
+extern s8 key_get_server_ip(char *ip);
 
 void bus_send_string(char *buf)
 {
-	int i;
+	u16 i;
 	
 	for (i = 0; buf[i] != '\0'; i++)
 		bus_send(&buf[i], 1);
@@ -35,14 +38,14 @@ void bus_send_string(char *buf)
 
 void bus_recieve_string(char *buf)
 {
-	int i = 0;
+	u16 i = 0;
 	
 	while ((buf[i++] = bus_recieve()) != '\0');
 }
 
-int str_include(char *buf, char *str)
+s8 str_include(char *buf, char *str)
 {	
-	int i = 0, j = 0, k;
+	u16 i = 0, j = 0, k;
 
 	for (i = 0; buf[i] != '\0'; i++) {
 		for (j = 0, k = i; str[j] != '\0' && buf[k] != '\0'; j++, k++) {
@@ -53,16 +56,16 @@ int str_include(char *buf, char *str)
 		}
 		
 		if (str[j] == '\0')
-			return 1;
+			return 0;
 		
 		if (buf[k] == '\0')
-			return 0;
+			return -1;
 	}
 	
-	return 0;
+	return -1;
 }
 
-int set_mode(int mode)
+s8 set_mode(u8 mode)
 {
 	sprintf(temp, "AT+CWMODE=%d\r\n", mode);
 	bus_send_string(temp);
@@ -74,7 +77,7 @@ int set_mode(int mode)
 	return str_include(output, "OK");
 }
 
-int set_show_ip(int mode)
+s8 set_show_ip(int mode)
 {
 	sprintf(temp, "AT+CIPDINFO=%d\r\n", mode);
 	bus_send_string(temp);
@@ -86,7 +89,7 @@ int set_show_ip(int mode)
 	return str_include(output, "OK");
 }
 
-int connect_ap(char *id, char *passwd, int channel)
+s8 connect_ap(char *id, char *passwd, s8 channel)
 {	
 	sprintf(temp, "AT+CWJAP=\"%s\",\"%s\"\r\n", id, passwd);
 	bus_send_string(temp);	
@@ -98,7 +101,7 @@ int connect_ap(char *id, char *passwd, int channel)
 	return str_include(output, "OK");
 }
 
-int set_auto_conn(int i)
+s8 set_auto_conn(u8 i)
 {
 	sprintf(temp, "AT+CWAUTOCONN=%d\r\n", i);
 	bus_send_string(temp);
@@ -110,7 +113,7 @@ int set_auto_conn(int i)
 	return str_include(output, "OK");	
 }
 
-int set_ap(char *sid, char *passwd)
+s8 set_ap(char *sid, char *passwd)
 {
 	sprintf(temp, "AT+CWJAP=\"%s\",\"%s\"\r\n", sid, passwd);
 	bus_send_string(temp);
@@ -122,7 +125,7 @@ int set_ap(char *sid, char *passwd)
 	return str_include(output, "OK");	
 }
 
-int set_echo(int on)
+s8 set_echo(s8 on)
 {
 	sprintf(temp, "ATE%d\r\n", on);
 	bus_send_string(temp);
@@ -134,7 +137,7 @@ int set_echo(int on)
 	return str_include(output, "OK");
 }
 
-int set_mux(int mode)
+s8 set_mux(s8 mode)
 {
 	sprintf(temp, "AT+CIPMUX=%d\r\n", mode);
 	bus_send_string(temp);
@@ -146,9 +149,21 @@ int set_mux(int mode)
 	return str_include(output, "OK");	
 }
 
-int udp_setup(char *ip, int dst_port)
+s8 udp_setup(u32 ip, u16 remote_port, u16 local_port)
 {
-	sprintf(temp, "AT+CIPSTART=%d,\"UDP\",\"%s\",%d,%d,2\r\n", gID++, ip, local_port_based++, dst_port);
+	char ip_str[16];
+	
+	sprintf(ip_str, "%d.%d.%d.%d", ip >> 24, (ip >> 16) & 0xff, (ip >> 8) & 0xff, ip &0xff);
+	
+	if (gID >= sizeof(ip_map)/sizeof(ip_map[0]))
+		return -1;
+	
+	ip_map[gID].ip = ip;
+	ip_map[gID].remote_port = remote_port;
+	ip_map[gID].local_port = local_port;
+	
+	sprintf(temp, "AT+CIPSTART=%d,\"UDP\",\"%s\",%d,%d,2\r\n", gID++, ip_str, remote_port, local_port);
+	
 	bus_send_string(temp);
 	
 	msleep(200);
@@ -158,15 +173,28 @@ int udp_setup(char *ip, int dst_port)
 	return str_include(output, "OK");
 }
 
-static int get_id(char *ip, int port)
+static s8 get_id(u32 ip, u16 local_port, u16 remote_port)
 {
-	return 0;
+	u8 i;
+	
+	for (i = 0; i < sizeof(ip_map) / sizeof(ip_map[0]); i++)
+		if (ip_map[i].ip == ip &&
+			local_port == ip_map[ip].local_port &&
+			remote_port == ip_map[ip].remote_port)
+			return i;
+		
+	return -1;
 }
 
-int send_data(char *ip, int port, char *data, int len)
+static struct ip_port_map *get_ip_port(u8 id)
+{
+	return &ip_map[id];
+}
+
+s8 send_data(u32 ip, u16 src_port, u16 dst_port, char *data, u16 len)
 {
 
-	int id = get_id(ip, port);
+	u8 id = get_id(ip, src_port, dst_port);
 	
 	sprintf(temp, "AT+CIPSEND=%d,%d\r\n", id, len);
 	bus_send_string(temp);
@@ -175,52 +203,40 @@ int send_data(char *ip, int port, char *data, int len)
 	
 	bus_recieve_string(output);
 	
-	if (str_include(output, ">")) {
+	if (str_include(output, ">") == 0) {
 		bus_send(data, len);
 		return 0;
 	} else
 		return -1;
 }
 
-static int get_len(char *buf, int *len)
+static u16 get_len(char *buf)
 {
-	int i;
-	int tmp = 0;
-	
-	for (i = 0; buf[i] != ':'; i++) {
+	u8 i;
+	u16 tmp = 0;
+		
+	for (i = 0; (buf[i] = bus_recieve()) != ':'; i++) {
 		tmp *= 10;
 		tmp += buf[i] - '0';
 	}
 	
-	*len = tmp;
-	
-	return i;
+	return tmp;
 }
 
-static void get_data(char *src, char *dst, int len)	
+void recv_data(u32 *ip, u16 *port, char *buf, u16 *buf_len)
 {
-	int i;
-	
-	for (i = 0; i < len; i++)
-		dst[i] = src[i];
-}
-
-int recieve_data(char *ip, int port, char *data)
-{
-	char *tmp = data;
-	int len;
+	char tmp[10], c;
+	u16 len;
 	char port_str[10];
-	int ip_len = strlen(ip);
-	int port_len;
-	int id = get_id(ip, port);
-	char c;
+	u8 fd;
+	u16 i;
+	struct ip_port_map *map;
 
 	while (1) {
 		c = bus_recieve();
 		
 		if (c == '+') {
-			msleep(20);
-			bus_recieve_string(data);			
+			msleep(20);		
 		} else if (c == '\0') {
 			msleep(20);
 			continue;
@@ -229,30 +245,36 @@ int recieve_data(char *ip, int port, char *data)
 			continue;
 		}
 		
-		if (strncmp(tmp, "IPD,", 3) != 0) {
-			tmp++;
-			continue;
-		}
+		/* read IPD */
+		for (i = 0; i < 4; i++)
+			tmp[i] = bus_recieve();
 		
-		tmp += 4;
-		
-		//id is from '0' to '9'
-		if ((char)((char)id + '0') == *tmp)
-			tmp += 2;
-		else
+		if (strncmp(tmp, "IPD,", 4) != 0)
 			continue;
 		
-		tmp += get_len(tmp, &len) + 1;
+		/* read fd */
+		for (i = 0; i < 2; i++)
+			tmp[i] = bus_recieve();
 		
-		get_data(tmp, data, len);
+		//fd is from '0' to '9'
+		fd  = tmp[0] - '0';
+		
+		/* get length */
+		len = get_len(tmp);
+		
+		for (i = 0; i < len; i++)
+			buf[i] = bus_recieve();
 		
 		break;
 	}
 	
-	return len;
+	map = get_ip_port(fd);
+	*ip = map->ip;
+	*port = map->remote_port;
+	*buf_len = len;
 }
 
-int udp_close(int id)
+s8 udp_close(u8 id)
 {
 	sprintf(temp, "AT+CIPCLOSE=%d\r\n", id);
 	bus_send_string(temp);
@@ -264,27 +286,45 @@ int udp_close(int id)
 	return str_include(output, "OK");
 }
 
+s8 set_ip(u32 ip)
+{
+	sprintf(temp, "AT+CIPSTA=\"%d.%d.%d.%d\"\r\n",
+								(ip >> 24) & 0xff,
+								(ip >> 16) & 0xff,
+								(ip >> 8) & 0xff,
+								ip & 0xff);
+	bus_send_string(temp);
+	
+	msleep(20);
+	
+	bus_recieve_string(output);
+	
+	return str_include(output, "OK");	
+}
+
 char data_i[100];
 
 void send_test(void)
 {
-	char ip[] = "192.168.4.3";
-	int port = 8888;
+	u32 ip = (192 << 24) | (168 << 16) | (1 << 8) | 20;
+	u16 src_port, dst_port;
+	u16 port = 8888;
 	char data[] = "hello world!";
+	u16 len;
 
 	udp_close(0);
 	
-	if (udp_setup(ip, port) < 0)
+	if (udp_setup(ip, port, port) < 0)
 		err_log("udp_setup");
 	
-	send_data(ip, port, data, strlen(data));
+	send_data(ip, port, port, data, strlen(data));
 	
-	recieve_data(ip, port, data_i);
+	recv_data(&ip, &src_port, data_i, &len);
 }
 
 void wifi_init(void)
 {
-	int i;
+	u8 i;
 	
 	char sid[20], passwd[20], host[20], host_passwd[20];
 	
@@ -310,10 +350,4 @@ void wifi_init(void)
 	
 	for (i = 0; i < 10; i++)
 		udp_close(i);
-	
-	udp_setup(GUN_IP, DST_PORT);
-	udp_setup(LCD_IP, DST_PORT);
-	\
-	
-	register_net_ops(send_data, recieve_data);
 }
