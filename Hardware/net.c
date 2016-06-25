@@ -87,10 +87,15 @@ OS_TCB RecvTaskStkTCB;
 void net_init(void)
 {
 	OS_ERR err;
+	s8 ret;
 	
-	udp_setup(HOST_IP, HOST_PORT, LOCAL_PORT_BASE);
-	udp_setup(GUN_IP, GUN_PORT, LOCAL_PORT_BASE);
-	udp_setup(LCD_IP, LCD_PORT, LOCAL_PORT_BASE);
+	if (udp_setup(HOST_IP, HOST_PORT, LOCAL_PORT_BASE) < 0)
+		err_log("");
+	
+	if (udp_setup(GUN_IP, GUN_PORT, LOCAL_PORT_BASE + 1) < 0)
+		err_log("");
+	if (udp_setup(LCD_IP, LCD_PORT, LOCAL_PORT_BASE + 2) < 0)
+		err_log("");
 	
     OSTaskCreate((OS_TCB *)&RecvTaskStkTCB, 
                 (CPU_CHAR *)"net reciv task", 

@@ -40,6 +40,8 @@ void bus_recieve_string(char *buf)
 {
 	u16 i = 0;
 	
+	memset(output, 0, sizeof(output));
+	
 	while ((buf[i++] = bus_recieve()) != '\0');
 }
 
@@ -115,7 +117,7 @@ s8 set_auto_conn(u8 i)
 
 s8 set_ap(char *sid, char *passwd)
 {
-	sprintf(temp, "AT+CWJAP=\"%s\",\"%s\"\r\n", sid, passwd);
+	sprintf(temp, "AT+CWSAP=\"%s\",\"%s\",5,3,4\r\n", sid, passwd);
 	bus_send_string(temp);
 	
 	msleep(200);
@@ -227,7 +229,6 @@ void recv_data(u32 *ip, u16 *port, char *buf, u16 *buf_len)
 {
 	char tmp[10], c;
 	u16 len;
-	char port_str[10];
 	u8 fd;
 	u16 i;
 	struct ip_port_map *map;
@@ -307,7 +308,7 @@ char data_i[100];
 void send_test(void)
 {
 	u32 ip = (192 << 24) | (168 << 16) | (1 << 8) | 20;
-	u16 src_port, dst_port;
+	u16 src_port;
 	u16 port = 8888;
 	char data[] = "hello world!";
 	u16 len;

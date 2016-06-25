@@ -7,7 +7,7 @@ static void I2S_Mode_Config(void);
 static uint8_t  buffer[1024*4]; 		// 文件缓冲区
 static short   outBuf[2][2500];		    // PCM流缓冲，使用两个缓冲区 
 static int bufflag = 0;
-
+#if 0
 /**
   * @brief  I2S_Bus_Init 初始化iis总线
   * @param  none
@@ -201,4 +201,5 @@ static void mp3_player(const char *filename)
 	I2S_Stop();
 }
 
+#endif
 #endif
