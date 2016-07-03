@@ -594,11 +594,6 @@
               <FilePath>.\Hardware\led.c</FilePath>
             </File>
             <File>
-              <FileName>i2c.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Hardware\i2c.c</FilePath>
-            </File>
-            <File>
               <FileName>esp8266.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Hardware\esp8266.c</FilePath>
@@ -607,11 +602,6 @@
               <FileName>bus.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Hardware\bus.c</FilePath>
-            </File>
-            <File>
-              <FileName>net.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Hardware\net.c</FilePath>
             </File>
             <File>
               <FileName>gpio.c</FileName>
@@ -637,6 +627,21 @@
               <FileName>key.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\key.c</FilePath>
+            </File>
+            <File>
+              <FileName>gun.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\gun.c</FilePath>
+            </File>
+            <File>
+              <FileName>clothes.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\clothes.c</FilePath>
+            </File>
+            <File>
+              <FileName>spi_flash.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\spi_flash.c</FilePath>
             </File>
           </Files>
         </Group>

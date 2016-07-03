@@ -22,11 +22,6 @@ void err_log(char *s)
 }
 
 s8 close_udp(u8 id);
-extern s8 key_get_sid(char *sid);
-extern s8 key_get_passwd(char *passwd);
-extern s8 key_get_host_sid(char *sid);
-extern s8 key_get_host_passwd(char *passwd);
-extern s8 key_get_server_ip(char *ip);
 
 void bus_send_string(char *buf)
 {
@@ -287,13 +282,10 @@ s8 udp_close(u8 id)
 	return str_include(output, "OK");
 }
 
-s8 set_ip(u32 ip)
+s8 set_ip(char *ip)
 {
-	sprintf(temp, "AT+CIPSTA=\"%d.%d.%d.%d\"\r\n",
-								(ip >> 24) & 0xff,
-								(ip >> 16) & 0xff,
-								(ip >> 8) & 0xff,
-								ip & 0xff);
+	sprintf(temp, "AT+CIPSTA=\"%s\"\r\n", ip);
+								
 	bus_send_string(temp);
 	
 	msleep(20);
@@ -321,34 +313,4 @@ void send_test(void)
 	send_data(ip, port, port, data, strlen(data));
 	
 	recv_data(&ip, &src_port, data_i, &len);
-}
-
-void wifi_init(void)
-{
-	u8 i;
-	
-	char sid[20], passwd[20], host[20], host_passwd[20];
-	
-	key_get_sid(sid);
-	key_get_passwd(passwd);
-	key_get_host_sid(host);
-	key_get_host_passwd(host_passwd);
-	
-	if (set_echo(0) < 0)
-		err_log("set_echo");
-	
-	if (set_mode(3) < 0)
-		err_log("set_mode");
-	
-	if (connect_ap(host, host_passwd, 3) < 0)
-		err_log("connect_ap");
-	
-	if (set_ap(sid, passwd) < 0)
-		err_log("set_ap");
-	
-	if (set_mux(1) < 0)
-		err_log("set_mux");
-	
-	for (i = 0; i < 10; i++)
-		udp_close(i);
 }

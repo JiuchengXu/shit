@@ -176,7 +176,6 @@ void  BSP_Init (void)
 	LED_Init();
 	sleep(1);
 	uart_inint();
-	wifi_init();
 	net_init();
 }
 
