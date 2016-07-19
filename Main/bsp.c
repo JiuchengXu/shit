@@ -170,13 +170,10 @@ void  BSP_Init (void)
 	GPIO_Configuration();
 	EXTI_Config();
 	NVIC_Configuration();
-
-	key_read_wifi_info();
 	
 	LED_Init();
 	sleep(1);
 	uart_inint();
-	net_init();
 }
 
 

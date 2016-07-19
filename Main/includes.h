@@ -31,6 +31,8 @@ typedef    signed  long  long  s64;                      /* 64-bit   signed inte
 #include  <stm32f10x.h>
 
 #include <os_app_hooks.h>
+
+#include "priority.h"
 #include "usart.h"	
 #include "led.h"
 #include "delay.h"

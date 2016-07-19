@@ -5,7 +5,7 @@
 
 
 #define I2C                   I2C1
-#define I2C_RCC               RCC_APB1Periph_I2C1
+#define I2C_RCC               RCC_APB1Periph_I2C2
 
 #define I2C_SCL_GPIO_RCC      RCC_APB2Periph_GPIOB
 #define I2C_SCL_GPIO          GPIOB

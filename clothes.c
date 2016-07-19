@@ -1,4 +1,5 @@
 #include "includes.h"
+#include "net.h"
 
 #define HOST_IP		((192 << 24) | (168 << 16) | (1 << 8) | 1)
 
@@ -9,11 +10,8 @@
 #define GUN_PORT			8889
 #define LCD_PORT			8890
 
-#define OS_TASK_RECV_PRIO           9
 #define OS_RECV_TASK_STACK_SIZE     128
-
-#define OS_TASK_HB_PRIO           8
-#define OS_HB_TASK_STACK_SIZE     128
+#define OS_HB_TASK_STACK_SIZE     16
 
 CPU_STK  RecvTaskStk[OS_RECV_TASK_STACK_SIZE];
 OS_TCB RecvTaskStkTCB;
@@ -22,63 +20,10 @@ CPU_STK  HBTaskStk[OS_HB_TASK_STACK_SIZE];
 OS_TCB HBTaskStkTCB;
 
 static char recv_buf[1024];                                                    
-static char characCode[8];
-
-extern void get_key_sn(char *sn);
-extern void get_ip_suffix(char *s);
-
-extern s8 set_mode(u8 mode);
-extern s8 set_show_ip(int mode);
-extern s8 connect_ap(char *id, char *passwd, s8 channel);
-extern s8 set_auto_conn(u8 i);
-extern s8 set_ap(char *sid, char *passwd);
-extern s8 set_echo(s8 on);
-extern s8 set_mux(s8 mode);
-extern s8 udp_setup(u32 ip, u16 remote_port, u16 local_port);
-extern s8 send_data(u32 ip, u16 src_port, u16 dst_port, char *data, u16 len);
-extern s8 set_ip(char *ip);
-extern void recv_data(u32 *ip, u16 *port, char *buf, u16 *buf_len);
-extern s8 udp_close(u8 id); 
-
-struct ActiveRequestData {
-	char transMod [1];
-	char packageID [4];
-	char activeRequest [10];	
-};
-
-struct ActiveAskData  {
-	char transMod [1];
-	char packageID [8];
-	char characCode [8];
-	char curTime [8];
-};
-
-struct ClothesStatusData  {
-	char transMod [1];
-	char packageID [4];
-	char deviceType [1];
-	char deviceSubType [1];
-	char lifeLeft [3];
-	char keySN [16];
-	char characCode [10][4];
-	char attachTime [10][8];
-	char PowerLeft [2];
-};
-
-struct StatusRespData {
-	char transMod [1];
-	char packageID [4];
-	char errorNum [2];	
-};
-
-struct HeartBeat {
-	char transMod [1];
-	char packageID [4];
-	char deviceType [1];
-	char deviceSubType [1];
-	char deviceSN [16];
-	char heartBeatID [10];
-};
+static char characCode[16];
+static s8 tasks_working;
+static s8 blod;
+static s8 actived;
 
 struct sub_device_info {
 	char type[10];	//最多支持10个子设备
@@ -87,27 +32,7 @@ struct sub_device_info {
 
 static struct sub_device_info sub_device;
 
-static void int2chars(char *str, int v, int len)
-{
-	int i;
-	
-	for (i = 0; i < len; i++) {
-		char tmp = (char)(v >> (len - i - 1)) & 0xf;
-		if (tmp >= 0 && tmp < 10)
-			str[i] = tmp + '0';
-		else if (tmp >= 0xa && tmp <=0xf)
-			str[i] = 'a' + (tmp - 0xa);
-	}
-}
-
 #define INT2CHAR(x, i)	int2chars(x, i, sizeof(x))
-
-static void str2chars(char *dst, char *str)
-{
-	int len = strlen(str);
-	memcpy(dst, str, len);
-}
-
 
 s8 sendto_host(char *buf, u16 len)
 {
@@ -130,9 +55,9 @@ static int active_request(void)
 {
 	struct ActiveRequestData data;
 	
-	INT2CHAR(data.transMod, 0); 
+	INT2CHAR(data.transMod, 0);
+	INT2CHAR(data.packTye, ACTIVE_REQUEST_TYPE);
 	INT2CHAR(data.packageID, packageID++);
-	str2chars(data.activeRequest, "active--me");
 	
 	return sendto_host((char *)&data, sizeof(data));
 }
@@ -142,9 +67,9 @@ int get_deviceSubType(void)
 	return 0;
 }
 
-int get_lifeLeft(void)
+s8 get_lifeLeft(void)
 {
-	return 100;
+	return blod;
 }
 
 u8 get_power(void)
@@ -156,11 +81,12 @@ static int upload_status_data(void)
 {
 	struct ClothesStatusData data;
 	
-	INT2CHAR(data.transMod, 0); 
+	INT2CHAR(data.transMod, 0);
+	INT2CHAR(data.packTye, CLOTHES_STATUS_TYPE);
 	INT2CHAR(data.packageID, packageID++);
 	INT2CHAR(data.deviceType, 0);
 	INT2CHAR(data.deviceSubType, get_deviceSubType());
-	INT2CHAR(data.lifeLeft, get_lifeLeft());
+	INT2CHAR(data.lifeLeft, (int)get_lifeLeft());
 	get_key_sn(data.keySN);
 	INT2CHAR(data.transMod, get_power());
 	
@@ -172,11 +98,11 @@ static int upload_heartbeat(void)
 	struct HeartBeat data;
 	
 	INT2CHAR(data.transMod, 0);
+	INT2CHAR(data.packTye, HEART_BEAT_TYPE);
 	INT2CHAR(data.packageID, packageID++);
 	INT2CHAR(data.deviceType, 0);
 	INT2CHAR(data.deviceSubType, get_deviceSubType());
 	get_key_sn(data.deviceSN);
-	str2chars(data.heartBeatID, "heart-beat");
 	
 	return sendto_host((char *)&data, sizeof(data));
 }
@@ -186,9 +112,24 @@ static void recv_gun_handler(char *buf, u16 len)
 	sendto_host(buf, len);
 }
 
+void reduce_blod(s8 i)
+{
+	blod -= i;
+	
+	if (blod < 0)
+		blod = 0;
+}
+
 static void recv_host_handler(char *buf, u16 len)
 {
-
+	struct ActiveAskData *data = (void *)buf;
+	u32 packTye;
+	
+	packTye = char2u32(data->packTye, sizeof(data->packTye));
+	if (packTye == ACTIVE_RESPONSE_TYPE) {
+		actived = 1;
+		
+	}
 }
 
 static void recv_lcd_handler(char *buf, u16 len)
@@ -220,18 +161,34 @@ void recv_task(void)
 		}
 	}
 }
-
+ 
 void hb_task(void)
 {
+	u16 i = 0;
+	s8 blod_bak = blod;
+	
 	while (1) {
-		upload_heartbeat();
-		sleep(20);
+		if (actived) {
+			if (i > 400)	// 20s
+				upload_heartbeat();
+
+			if (blod_bak != blod)
+				upload_status_data();
+		} else {
+			blod_bak = blod;
+			i = 0;
+		}
+			
+		msleep(50);		
+		i++;
+		
+		if (i > 400)
+			i = 0;
 	}
 }
 	
 void net_init(void)
 {
-	OS_ERR err;
 	s8 ret;
 	u8 i;
 	char sid[20] = "CSsub", passwd[20] = "12345678", host[20] = "CS001", host_passwd[20] = "12345678", ip[16];
@@ -268,32 +225,78 @@ void net_init(void)
 	
 	if (udp_setup(LCD_IP, LCD_PORT, LCD_PORT) < 0)
 		err_log("");
+}
+
+void start_clothe_tasks(void)
+{
+	OS_ERR err;
+	
+	tasks_working = 1;
 	
     OSTaskCreate((OS_TCB *)&RecvTaskStkTCB, 
-                (CPU_CHAR *)"net reciv task", 
-                (OS_TASK_PTR)recv_task, 
-                (void * )0, 
-                (OS_PRIO)OS_TASK_RECV_PRIO, 
-                (CPU_STK *)&RecvTaskStk[0], 
-                (CPU_STK_SIZE)OS_RECV_TASK_STACK_SIZE/10, 
-                (CPU_STK_SIZE)OS_RECV_TASK_STACK_SIZE, 
-                (OS_MSG_QTY) 0, 
-                (OS_TICK) 0, 
-                (void *)0,
-                (OS_OPT)(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
-                (OS_ERR*)&err);	
+            (CPU_CHAR *)"net reciv task", 
+            (OS_TASK_PTR)recv_task, 
+            (void * )0, 
+            (OS_PRIO)OS_TASK_RECV_PRIO, 
+            (CPU_STK *)&RecvTaskStk[0], 
+            (CPU_STK_SIZE)OS_RECV_TASK_STACK_SIZE/10, 
+            (CPU_STK_SIZE)OS_RECV_TASK_STACK_SIZE, 
+            (OS_MSG_QTY) 0, 
+            (OS_TICK) 0, 
+            (void *)0,
+            (OS_OPT)(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
+            (OS_ERR*)&err);	
 				
-	    OSTaskCreate((OS_TCB *)&HBTaskStkTCB, 
-                (CPU_CHAR *)"net reciv task", 
-                (OS_TASK_PTR)hb_task, 
-                (void * )0, 
-                (OS_PRIO)OS_TASK_HB_PRIO, 
-                (CPU_STK *)&HBTaskStk[0], 
-                (CPU_STK_SIZE)OS_HB_TASK_STACK_SIZE/10, 
-                (CPU_STK_SIZE)OS_HB_TASK_STACK_SIZE, 
-                (OS_MSG_QTY) 0, 
-                (OS_TICK) 0, 
-                (void *)0,
-                (OS_OPT)(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
-                (OS_ERR*)&err);
+    OSTaskCreate((OS_TCB *)&HBTaskStkTCB, 
+            (CPU_CHAR *)"net reciv task", 
+            (OS_TASK_PTR)hb_task, 
+            (void * )0, 
+            (OS_PRIO)OS_TASK_HB_PRIO, 
+            (CPU_STK *)&HBTaskStk[0], 
+            (CPU_STK_SIZE)OS_HB_TASK_STACK_SIZE/10, 
+            (CPU_STK_SIZE)OS_HB_TASK_STACK_SIZE, 
+            (OS_MSG_QTY) 0, 
+            (OS_TICK) 0, 
+            (void *)0,
+            (OS_OPT)(OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
+            (OS_ERR*)&err);
+}
+
+void delete_clothe_tasks(void)
+{
+	OS_ERR err;
+	
+	tasks_working = 0;
+	
+	OSTaskDel((OS_TCB *)&RecvTaskStkTCB, &err);
+	OSTaskDel((OS_TCB *)&HBTaskStkTCB, &err);	
+}
+
+void main_loop(void)
+{
+	while (1) {
+		if (key_state_machine()) {
+			
+			actived = 0;
+			
+			blod += get_key_blod();
+			
+			if (blod > 100)
+				blod = 100;
+			
+			net_init();
+			
+			if (tasks_working == 0)
+				start_clothe_tasks();
+					
+			while (actived == 0) {
+				active_request();
+				sleep(1);
+			}
+			
+			red_led_on();
+		}
+		
+		sleep(1);
+	}
 }

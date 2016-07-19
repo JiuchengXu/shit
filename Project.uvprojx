@@ -643,6 +643,21 @@
               <FileType>1</FileType>
               <FilePath>.\spi_flash.c</FilePath>
             </File>
+            <File>
+              <FileName>net.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Hardware\net.h</FilePath>
+            </File>
+            <File>
+              <FileName>IrDA.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardware\IrDA.c</FilePath>
+            </File>
+            <File>
+              <FileName>string.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardware\string.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
