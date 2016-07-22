@@ -4,16 +4,16 @@
 #include"stm32f10x.h"
 
 
-#define I2C                   I2C1
+#define I2C                   I2C2
 #define I2C_RCC               RCC_APB1Periph_I2C2
 
 #define I2C_SCL_GPIO_RCC      RCC_APB2Periph_GPIOB
 #define I2C_SCL_GPIO          GPIOB
-#define I2C_SCL_Pin           GPIO_Pin_6
+#define I2C_SCL_Pin           GPIO_Pin_10
 
 #define I2C_SDA_GPIO_RCC      RCC_APB2Periph_GPIOB
 #define I2C_SDA_GPIO          GPIOB
-#define I2C_SDA_Pin           GPIO_Pin_7
+#define I2C_SDA_Pin           GPIO_Pin_11
 
 void I2C_AT24Cx_Init(void); 
 

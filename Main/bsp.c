@@ -37,7 +37,7 @@
 #define  BSP_MODULE
 #include <bsp.h>
 #include <includes.h>
-
+#include "includes.h"
 /*
 *********************************************************************************************************
 *                                            LOCAL DEFINES
@@ -136,7 +136,7 @@ CPU_INT32U  BSP_CPU_ClkFreq_MHz;
 //π‹Ω≈≈‰÷√
 void GPIO_Configuration(void)
 {
-
+	
 }
 
 //≈‰÷√÷–∂œ“˝Ω≈
@@ -164,6 +164,8 @@ void NVIC_Configuration(void)
 extern void wifi_init(void);
 extern void key_read_wifi_info(void);
 extern void net_init(void);
+extern void at24c02_init(void);
+extern void SPI3_init(void);
 
 void  BSP_Init (void)
 {
@@ -174,6 +176,11 @@ void  BSP_Init (void)
 	LED_Init();
 	sleep(1);
 	uart_inint();
+	esp8266_gpio_init();
+	at24c02_init();
+	SPI3_init();
+	
+	
 }
 
 

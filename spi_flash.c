@@ -5,12 +5,12 @@
 
 
 /* Select SPI FLASH: ChipSelect pin low  */
-#define Select_Flash()     GPIO_ResetBits(GPIOA, GPIO_Pin_2)
+#define Select_Flash()     GPIO_ResetBits(GPIOA, GPIO_Pin_15)
 /* Deselect SPI FLASH: ChipSelect pin high */
-#define NotSelect_Flash()    GPIO_SetBits(GPIOA, GPIO_Pin_2)
+#define NotSelect_Flash()    GPIO_SetBits(GPIOA, GPIO_Pin_15)
 
-#define FLASH_CS_0()     GPIO_ResetBits(GPIOA,GPIO_Pin_2)
-#define FLASH_CS_1()     GPIO_SetBits(GPIOA,GPIO_Pin_2)
+#define FLASH_CS_0()     GPIO_ResetBits(GPIOA,GPIO_Pin_15)
+#define FLASH_CS_1()     GPIO_SetBits(GPIOA,GPIO_Pin_15)
 
 #define W25X_WriteEnable		0x06 
 #define W25X_WriteDisable		0x04 
@@ -31,22 +31,21 @@
 
 #define Dummy_Byte								0xA5
 
-void spi1_init(void)
+void SPI3_init(void)
 {
 	SPI_InitTypeDef  SPI_InitStructure;
 	GPIO_InitTypeDef GPIO_InitStructure;
 
-	/* Enable SPI1 GPIOA and GPIOB clocks */
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1 | RCC_APB2Periph_GPIOA |RCC_APB2Periph_GPIOB, ENABLE);
+	/* Enable SPI3 GPIOA and GPIOB clocks */
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB, ENABLE);
 
-	/* Configure SPI1 pins: NSS, SCK, MISO and MOSI */
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_4 | GPIO_Pin_3;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
-	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
 
-	/* Configure PB.02 as Output push-pull, used as Flash Chip select */
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
@@ -54,7 +53,7 @@ void spi1_init(void)
 	/* Deselect the FLASH: Chip Select high */
 	NotSelect_Flash();
 
-	/* SPI1 configuration */ 
+	/* SPI3 configuration */ 
 	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
 	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
 	SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
@@ -64,20 +63,20 @@ void spi1_init(void)
 	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
 	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
 	SPI_InitStructure.SPI_CRCPolynomial = 7;
-	SPI_Init(SPI1, &SPI_InitStructure);
+	SPI_Init(SPI3, &SPI_InitStructure);
 
-	//SPI_I2S_DMACmd(SPI1,SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx,ENABLE);
+	//SPI_I2S_DMACmd(SPI3,SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx,ENABLE);
 
 	/* Enable SPI2 Rx buffer DMA transfer request */
-	//  SPI_DMACmd(SPI1, SPI_DMAReq_Rx | SPI_DMAReq_Tx, ENABLE);
+	//  SPI_DMACmd(SPI3, SPI_DMAReq_Rx | SPI_DMAReq_Tx, ENABLE);
 
-	/* Enable SPI1  */
-	SPI_Cmd(SPI1, ENABLE);  
+	/* Enable SPI3  */
+	SPI_Cmd(SPI3, ENABLE);  
 }
 
 int32_t SPIFLASH_disk_initialize(void)
 {
-	spi1_init();
+	SPI3_init();
 	return 0;
 
 }
@@ -86,17 +85,17 @@ uint8_t spi_write_byte(uint8_t data)
 {
 	/*u32 Count = 0;*/
   /* Loop while DR register in not emplty */
-  while(SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET);
+  while(SPI_I2S_GetFlagStatus(SPI3, SPI_I2S_FLAG_TXE) == RESET);
 
-  /* Send byte through the SPI1 peripheral */
-  SPI_I2S_SendData(SPI1, data);
+  /* Send byte through the SPI3 peripheral */
+  SPI_I2S_SendData(SPI3, data);
 
   /* Wait to receive a byte */
-  while(SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) == RESET);
+  while(SPI_I2S_GetFlagStatus(SPI3, SPI_I2S_FLAG_RXNE) == RESET);
  
 
   /* Return the byte read from the SPI bus */
-  return SPI_I2S_ReceiveData(SPI1);
+  return SPI_I2S_ReceiveData(SPI3);
 }
 
 

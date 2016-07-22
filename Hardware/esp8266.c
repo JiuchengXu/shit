@@ -314,3 +314,59 @@ void send_test(void)
 	
 	recv_data(&ip, &src_port, data_i, &len);
 }
+
+
+void update_esp8266(void)
+{
+	GPIO_WriteBit(GPIOB, GPIO_Pin_0, 0);
+}
+
+void work_esp8266(void)
+{
+	GPIO_WriteBit(GPIOB, GPIO_Pin_0, 1);
+}
+
+void enbale_esp8266(void)
+{
+	GPIO_WriteBit(GPIOA, GPIO_Pin_8, 1);
+	//GPIO_WriteBit(GPIOB, GPIO_Pin_8, 0);
+}
+
+void disable_esp8266(void)
+{
+	GPIO_WriteBit(GPIOA, GPIO_Pin_8, 0);
+}
+
+void reset_esp8266(void)
+{
+	GPIO_WriteBit(GPIOA, GPIO_Pin_12, 1);
+	msleep(100);
+	GPIO_WriteBit(GPIOA, GPIO_Pin_12, 0);
+	msleep(100);
+	GPIO_WriteBit(GPIOA, GPIO_Pin_12, 1);
+}
+
+void esp8266_gpio_init(void)
+{
+	GPIO_InitTypeDef GPIO_InitStructure;
+	
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB |RCC_APB2Periph_GPIOA, ENABLE);
+	
+	// download
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	
+	// enable, rst
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_12;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);	
+	
+	work_esp8266();
+	enbale_esp8266();
+	msleep(100);	
+	reset_esp8266();
+
+}

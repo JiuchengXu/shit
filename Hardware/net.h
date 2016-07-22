@@ -19,7 +19,7 @@ s8 set_ip(char *ip);
 void recv_data(u32 *ip, u16 *port, char *buf, u16 *buf_len);
 s8 udp_close(u8 id); 
 s8 key_state_machine(void);
-s8 get_key_blod(void)
+s8 get_key_blod(void);
 
 #define ACTIVE_REQUEST_TYPE		0
 #define ACTIVE_RESPONSE_TYPE	1
@@ -27,7 +27,6 @@ s8 get_key_blod(void)
 #define CLOTHES_STATUS_TYPE		3
 #define STATUS_RESPONSE_TYPE	4
 #define HEART_BEAT_TYPE			5
-
 
 struct ActiveRequestData {
 	char transMod [1];
@@ -85,5 +84,11 @@ void str2chars(char *dst, char *str);
 u32 char2u32(char *s, s8 bit_len);
 
 void reduce_blod(s8 i);
+
+void esp8266_gpio_init(void);
+
+void update_esp8266(void);
+
+void work_esp8266(void);
 
 #endif
