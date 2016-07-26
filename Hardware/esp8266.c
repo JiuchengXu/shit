@@ -1,12 +1,9 @@
+#include <os.h>
 #include "includes.h"
 #include "delay.h"
 #include "net.h"
 #include "bus.h"
 
-
-char temp[100];
-char output[100];
-static u8 gID;
 
 struct ip_port_map {
 	u32 ip;
@@ -14,7 +11,11 @@ struct ip_port_map {
 	u16 local_port;
 };
 
-struct ip_port_map ip_map[5];
+struct ip_port_map ip_map[20];
+
+static char temp[100];
+static char output[2048];
+static u8 gID;
 
 void err_log(char *s)
 {
@@ -26,9 +27,12 @@ s8 close_udp(u8 id);
 void bus_send_string(char *buf)
 {
 	u16 i;
+	CPU_SR_ALLOC();
 	
+	OS_CRITICAL_ENTER_CPU_CRITICAL_EXIT();
 	for (i = 0; buf[i] != '\0'; i++)
 		bus_send(&buf[i], 1);
+	OS_CRITICAL_EXIT();
 }
 
 void bus_recieve_string(char *buf)
@@ -91,7 +95,7 @@ s8 connect_ap(char *id, char *passwd, s8 channel)
 	sprintf(temp, "AT+CWJAP=\"%s\",\"%s\"\r\n", id, passwd);
 	bus_send_string(temp);	
 
-	sleep(7);
+	sleep(30);
 	
 	bus_recieve_string(output);
 	
@@ -109,6 +113,17 @@ s8 set_auto_conn(u8 i)
 	
 	return str_include(output, "OK");	
 }
+s8 close_conn(void)
+{
+	sprintf(temp, "AT+CWQAP\r\n");
+	bus_send_string(temp);
+	
+	msleep(200);
+	
+	bus_recieve_string(output);
+	
+	return str_include(output, "OK");
+}
 
 s8 set_ap(char *sid, char *passwd)
 {
@@ -122,8 +137,12 @@ s8 set_ap(char *sid, char *passwd)
 	return str_include(output, "OK");	
 }
 
+extern void reset_buffer(void);
+
 s8 set_echo(s8 on)
 {
+	reset_buffer();
+	
 	sprintf(temp, "ATE%d\r\n", on);
 	bus_send_string(temp);
 	
@@ -159,7 +178,8 @@ s8 udp_setup(u32 ip, u16 remote_port, u16 local_port)
 	ip_map[gID].remote_port = remote_port;
 	ip_map[gID].local_port = local_port;
 	
-	sprintf(temp, "AT+CIPSTART=%d,\"UDP\",\"%s\",%d,%d,2\r\n", gID++, ip_str, remote_port, local_port);
+	//sprintf(temp, "AT+CIPSTART=%d,\"UDP\",\"%s\",%d,%d,2\r\n", gID++, ip_str, remote_port, local_port);
+	sprintf(temp, "AT+CIPSTART=%d,\"UDP\",\"%s\",%d,%d\r\n", gID++, ip_str, remote_port, local_port);
 	
 	bus_send_string(temp);
 	
@@ -176,8 +196,8 @@ static s8 get_id(u32 ip, u16 local_port, u16 remote_port)
 	
 	for (i = 0; i < sizeof(ip_map) / sizeof(ip_map[0]); i++)
 		if (ip_map[i].ip == ip &&
-			local_port == ip_map[ip].local_port &&
-			remote_port == ip_map[ip].remote_port)
+			local_port == ip_map[i].local_port &&
+			remote_port == ip_map[i].remote_port)
 			return i;
 		
 	return -1;
@@ -194,6 +214,7 @@ s8 send_data(u32 ip, u16 src_port, u16 dst_port, char *data, u16 len)
 	u8 id = get_id(ip, src_port, dst_port);
 	
 	sprintf(temp, "AT+CIPSEND=%d,%d\r\n", id, len);
+	
 	bus_send_string(temp);
 	
 	msleep(20);
@@ -295,6 +316,33 @@ s8 set_ip(char *ip)
 	return str_include(output, "OK");	
 }
 
+s8 set_bound(void)
+{
+	sprintf(temp, "AT+UART=115200,8,1,0,0\r\n");
+								
+	bus_send_string(temp);
+	
+	msleep(20);
+	
+	bus_recieve_string(output);
+	
+	return str_include(output, "OK");	
+
+}
+
+s8 esp_reset(void)
+{
+	sprintf(temp, "AT+RST\r\n");
+								
+	bus_send_string(temp);
+	
+	msleep(200);
+	
+	bus_recieve_string(output);
+	
+	return str_include(output, "OK");	
+}
+
 char data_i[100];
 
 void send_test(void)
@@ -359,14 +407,21 @@ void esp8266_gpio_init(void)
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
 	
 	// enable, rst
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_12;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_12 | GPIO_Pin_4;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);	
 	
+	//update_esp8266();
 	work_esp8266();
+	GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
 	enbale_esp8266();
 	msleep(100);	
 	reset_esp8266();
+	
+	set_bound();
+	esp_reset();
 
+	//while (1)
+	//	sleep(1);
 }

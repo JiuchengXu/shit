@@ -5,7 +5,7 @@
 
 #define BUF_LENGTH	2048
 static char RxBuf[BUF_LENGTH];
-static int w_index, r_start;
+static volatile int w_index, r_start;
 
 void (*uart1_recv_hook)(char c);
 void (*uart2_recv_hook)(char c);
@@ -53,14 +53,15 @@ void USART1_IRQHandler(void)
 
 void uart2_putc(char c)
 {
-	USART_SendData(WIFI_USART, c);
-    while(USART_GetFlagStatus(WIFI_USART, USART_FLAG_TXE) == RESET);
+	while(USART_GetFlagStatus(WIFI_USART, USART_FLAG_TXE) == RESET);
+	USART_SendData(WIFI_USART, c);  
 }
 
 void uart1_putc(char c)
 {
+	while(USART_GetFlagStatus(USB_USART, USART_FLAG_TXE) == RESET);
     USART_SendData(USB_USART, c);
-    while(USART_GetFlagStatus(WIFI_USART, USART_FLAG_TXE) == RESET);
+    
 }
 
 void uart_puts(char *str)
@@ -96,6 +97,11 @@ static void uart2_send(char *buf, int len)
 	for (i = 0; i < len; i++) {
 		uart2_putc(buf[i]);
 	}	
+}
+
+void reset_buffer(void)
+{
+	r_start = w_index;
 }
 
 void uart_inint(void)

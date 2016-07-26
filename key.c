@@ -21,7 +21,7 @@ enum {
 
 static struct eeprom_key_info key;
 
-char eeprom[] = "1234567890abcdefasdfghjklqwertyu001100100";
+char eeprom[] = "1234567890abcdefasdfghjklqwertyu021100100";
 static int insert_flag = 0;
 
 static CPU_STK  TaskStk[OS_TASK_STACK_SIZE];

@@ -39,7 +39,7 @@ void I2C1_EV_IRQHandler(void)
 		I2C_ClearITPendingBit(I2C1, I2C_IT_ADDR);
 	else if (I2C_GetITStatus(I2C1, I2C_IT_RXNE) == SET) {
 		I2C_ClearITPendingBit(I2C1, I2C_IT_RXNE);
-		reduce_blod((s8)I2C_ReceiveData(I2C1));
+		//reduce_blod((s8)I2C_ReceiveData(I2C1));
 	} else if (I2C_GetITStatus(I2C1,I2C_IT_STOPF) == SET) {
 		I2C_ClearITPendingBit(I2C1, I2C_IT_STOPF);
 		

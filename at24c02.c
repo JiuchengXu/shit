@@ -16,7 +16,6 @@ void at24c02_init(void)
 
 	RCC_APB1PeriphClockCmd(I2C_RCC, ENABLE);
 
-
 	I2C_DeInit(I2C);
 
 	I2C_InitStructure.I2C_ClockSpeed          = 100000;    //100KHz I2C

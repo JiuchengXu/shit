@@ -3,6 +3,12 @@
 
 #include "includes.h"
 
+//#define GUN
+
+#ifndef GUN
+#define CLOTHE
+#endif
+
 void get_key_sn(char *sn);
 void get_ip_suffix(char *s);
 
@@ -13,6 +19,7 @@ s8 set_auto_conn(u8 i);
 s8 set_ap(char *sid, char *passwd);
 s8 set_echo(s8 on);
 s8 set_mux(s8 mode);
+s8 close_conn(void);
 s8 udp_setup(u32 ip, u16 remote_port, u16 local_port);
 s8 send_data(u32 ip, u16 src_port, u16 dst_port, char *data, u16 len);
 s8 set_ip(char *ip);
@@ -37,9 +44,16 @@ struct ActiveRequestData {
 struct ActiveAskData  {
 	char transMod [1];
 	char packTye[1];
-	char packageID [8];
-	char characCode [16];
+	char packageID [4];
+	char characCode [4];
 	char curTime [8];
+};
+
+struct GunActiveAskData  {
+	char transMod [1];
+	char packTye[1];
+	char packageID [4];
+	char characCode [4];
 };
 
 struct ClothesStatusData  {
@@ -52,6 +66,19 @@ struct ClothesStatusData  {
 	char keySN [16];
 	char characCode [10][4];
 	char attachTime [10][8];
+	char PowerLeft [2];
+};
+
+struct GunStatusData  {
+	char transMod [1];
+	char packTye[1];
+	char packageID [4];
+	char deviceType [1];
+	char deviceSubType [1];
+	char deviceSN [16];
+	char bulletLeft [3];
+	char keySN [16];
+	char characCode [4];
 	char PowerLeft [2];
 };
 

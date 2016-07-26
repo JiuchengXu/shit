@@ -1,5 +1,6 @@
 #include "stm32f10x.h"
 #include "i2s.h"
+
 #if 0
 static void I2S_GPIO_Config(void);
 static void I2S_Mode_Config(void);

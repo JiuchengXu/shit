@@ -174,7 +174,6 @@ void  BSP_Init (void)
 	NVIC_Configuration();
 	
 	LED_Init();
-	sleep(1);
 	uart_inint();
 	esp8266_gpio_init();
 	at24c02_init();
