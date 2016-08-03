@@ -129,62 +129,6 @@ CPU_INT32U  BSP_CPU_ClkFreq_MHz;
 
 /*
 *********************************************************************************************************
-*                                               BSP_Init()
-*********************************************************************************************************
-*/
-
-//管脚配置
-void GPIO_Configuration(void)
-{
-	
-}
-
-//配置中断引脚
-void EXTI_Config(void)
-{
-
-}
-
-//中断配置
-void NVIC_Configuration(void)
-{
-	#if 0
-	NVIC_InitTypeDef NVIC_InitStructure;
-	
-	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
-	/* Enable the USART1 Interrupt */
-	NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;	 // USART1 全局中断 ;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&NVIC_InitStructure);
-	#endif
-}
-
-extern void wifi_init(void);
-extern void key_read_wifi_info(void);
-extern void net_init(void);
-extern void at24c02_init(void);
-extern void SPI3_init(void);
-
-void  BSP_Init (void)
-{
-	GPIO_Configuration();
-	EXTI_Config();
-	NVIC_Configuration();
-	
-	LED_Init();
-	uart_inint();
-	esp8266_gpio_init();
-	at24c02_init();
-	SPI3_init();
-	
-	
-}
-
-
-/*
-*********************************************************************************************************
 *                                            BSP_CPU_ClkFreq()
 *
 * Description : Read CPU registers to determine the CPU clock frequency of the chip.
@@ -424,3 +368,37 @@ CPU_TS_TMR  CPU_TS_TmrRd (void)
     return ((CPU_TS_TMR)DWT_CYCCNT);
 }
 #endif
+
+
+/*
+*********************************************************************************************************
+*                                               BSP_Init()
+*********************************************************************************************************
+*/
+
+extern void wifi_init(void);
+extern void key_read_wifi_info(void);
+extern void net_init(void);
+extern void at24c02_init(void);
+extern void SPI3_init(void);
+extern void SPI_FLASH_ReadDeviceID(void);
+extern void beep_init(void);
+extern void esp8266_gpio_init(void);
+extern void I2S_Bus_Init(void);
+extern void led_38k_init(void);
+
+void  BSP_Init (void)
+{	
+	LED_Init();
+	uart_inint();
+	esp8266_gpio_init();
+	at24c02_init();
+	SPI3_init();
+	beep_init();
+	
+#ifdef GUN
+	led_38k_init();
+	I2S_Bus_Init();
+#endif
+	
+}

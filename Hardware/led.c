@@ -2,28 +2,28 @@
 
 void led_off(void)
 {
-	GPIO_WriteBit(GPIOB, GPIO_Pin_14, 1);
-	GPIO_WriteBit(GPIOC, GPIO_Pin_8, 1);
-	GPIO_WriteBit(GPIOC, GPIO_Pin_7, 1);
+	GPIO_WriteBit(GPIOB, GPIO_Pin_14, Bit_SET);
+	GPIO_WriteBit(GPIOC, GPIO_Pin_8, Bit_SET);
+	GPIO_WriteBit(GPIOC, GPIO_Pin_7, Bit_SET);
 }
 
 void red_led_on(void)
 {
 	led_off();
-	GPIO_WriteBit(GPIOB, GPIO_Pin_14, 0);
+	GPIO_WriteBit(GPIOB, GPIO_Pin_14, Bit_RESET);
 }
 
 void green_led_on(void)
 {
 	led_off();
-	GPIO_WriteBit(GPIOC, GPIO_Pin_8, 0);
+	GPIO_WriteBit(GPIOC, GPIO_Pin_8, Bit_RESET);
 }
 
 
 void yellow_led_on(void)
 {	
 	led_off();
-	GPIO_WriteBit(GPIOC, GPIO_Pin_7, 0);
+	GPIO_WriteBit(GPIOC, GPIO_Pin_7, Bit_RESET);
 }
 
 void LED_Init()

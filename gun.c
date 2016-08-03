@@ -2,11 +2,11 @@
 #include "net.h"
 
 #ifdef GUN
-#define HOST_IP		(((u8)192 << 24) | ((u8)168 << 16) | ((u8)4 << 8) | 1)
+#define HOST_IP		(((u32)192 << 24) | ((u32)168 << 16) | ((u32)4 << 8) | 1)
 
-#define GUN_IP		(((u8)192 << 24) | ((u8)168 << 16) | ((u8)4 << 8) | 2)
-#define RIFLE_IP	(((u8)192 << 24) | ((u8)168 << 16) | ((u8)4 << 8) | 3)
-#define LCD_IP		(((u8)192 << 24) | ((u8)168 << 16) | ((u8)4 << 8) | 5)
+#define GUN_IP		(((u32)192 << 24) | ((u32)168 << 16) | ((u32)4 << 8) | 2)
+#define RIFLE_IP	(((u32)192 << 24) | ((u32)168 << 16) | ((u32)4 << 8) | 3)
+#define LCD_IP		(((u32)192 << 24) | ((u32)168 << 16) | ((u32)4 << 8) | 5)
 
 #define HOST_PORT			(u16)8888
 #define GUN_PORT			(u16)8889
@@ -33,16 +33,8 @@ static OS_TCB HBTaskStkTCB;
 
 static char recv_buf[1024];                                                    
 static u16 characCode;
-static s8 tasks_working;
 static s8 bulet;
 static s8 actived;
-
-struct sub_device_info {
-	char type[10];	//最多支持10个子设备
-	char numb;
-};
-
-static struct sub_device_info sub_device;
 
 #define INT2CHAR(x, i)	int2chars(x, i, sizeof(x))
 
@@ -226,7 +218,6 @@ static void hb_task(void)
 	
 static void net_init(void)
 {
-	s8 ret;
 	u8 i;
 	char host[20] = "CSsub", host_passwd[20] = "12345678", \
 	    ip[16];
@@ -274,8 +265,6 @@ static void start_gun_tasks(void)
 {
 	OS_ERR err;
 	
-	tasks_working = 1;
-	
     OSTaskCreate((OS_TCB *)&RecvTaskStkTCB, 
             (CPU_CHAR *)"net reciv task", 
             (OS_TASK_PTR)recv_task, 
@@ -305,15 +294,6 @@ static void start_gun_tasks(void)
             (OS_ERR*)&err);
 }
 
-static void delete_clothe_tasks(void)
-{
-	OS_ERR err;
-	
-	tasks_working = 0;
-	
-	OSTaskDel((OS_TCB *)&RecvTaskStkTCB, &err);
-	OSTaskDel((OS_TCB *)&HBTaskStkTCB, &err);	
-}
 static s8 bulet_state_machine(void)
 {
 	if (get_buletLeft() <= 0)
