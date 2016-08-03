@@ -1,18 +1,43 @@
-#include "at24c02.h"
+#include "includes.h"
+
+#define I2C                   I2C2
+#define I2C_RCC               RCC_APB1Periph_I2C2
+
+#define I2C_SCL_GPIO_RCC      RCC_APB2Periph_GPIOB
+#define I2C_SCL_GPIO          GPIOB
+#define I2C_SCL_Pin           GPIO_Pin_10
+
+#define I2C_SDA_GPIO_RCC      RCC_APB2Periph_GPIOB
+#define I2C_SDA_GPIO          GPIOB
+#define I2C_SDA_Pin           GPIO_Pin_11
+
+#define EEPROM1_WP_RCC			RCC_APB2Periph_GPIOC
+#define EEPROM1_WP				GPIOC
+#define EEPROM1_WP_Pin			GPIO_Pin_4
+#define AT24Cx_Address           0xa0 
+#define AT24Cx_PageSize          8  
+
 
 void at24c02_init(void)
 {
 	GPIO_InitTypeDef GPIO_InitStructure;
 	I2C_InitTypeDef I2C_InitStructure;
 
-	RCC_APB2PeriphClockCmd(I2C_SCL_GPIO_RCC, ENABLE);          
-
+	RCC_APB2PeriphClockCmd(I2C_SCL_GPIO_RCC | EEPROM1_WP_RCC, ENABLE);          
 
 	GPIO_InitStructure.GPIO_Pin    = I2C_SCL_Pin|I2C_SDA_Pin;
 	GPIO_InitStructure.GPIO_Speed  = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode   = GPIO_Mode_AF_OD;           
 
 	GPIO_Init(I2C_SCL_GPIO, &GPIO_InitStructure);
+	
+	GPIO_InitStructure.GPIO_Pin    = EEPROM1_WP_Pin;
+	GPIO_InitStructure.GPIO_Speed  = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_Mode   = GPIO_Mode_Out_PP;
+	
+	GPIO_Init(EEPROM1_WP, &GPIO_InitStructure);
+	
+	GPIO_ResetBits(EEPROM1_WP, EEPROM1_WP_Pin);
 
 	RCC_APB1PeriphClockCmd(I2C_RCC, ENABLE);
 
@@ -87,12 +112,12 @@ static void I2C_AT24Cx_WaitForComplete(void)
 	do
 	{
 
-		I2C_GenerateSTART(I2C1, ENABLE); 
+		I2C_GenerateSTART(I2C, ENABLE); 
 
-		SR1_Tmp = I2C_ReadRegister(I2C1, I2C_Register_SR1); 
+		SR1_Tmp = I2C_ReadRegister(I2C, I2C_Register_SR1); 
 
-		I2C_Send7bitAddress(I2C1,AT24Cx_Address, I2C_Direction_Transmitter);
-	}while(!(I2C_ReadRegister(I2C1, I2C_Register_SR1) & 0x0002)); 
+		I2C_Send7bitAddress(I2C,AT24Cx_Address, I2C_Direction_Transmitter);
+	}while(!(I2C_ReadRegister(I2C, I2C_Register_SR1) & 0x0002)); 
 
 
 	I2C_ClearFlag(I2C, I2C_FLAG_AF);  
@@ -192,4 +217,15 @@ void I2C_AT24Cx_Writes(u8 Address,u8 *WriteData,u16 WriteNumber)
 			I2C_AT24Cx_WaitForComplete();
 		}
 	}
+}
+
+void AT24Cxx_test(void)
+{
+	char a[]="abcdefghijklmnopqstuvwxyz0123456789";
+	
+	at24c02_init();
+	
+	I2C_AT24Cx_Writes(0, (u8 *)a, sizeof(a));
+	memset(a, 0, sizeof(a));
+	I2C_AT24Cx_Reads(0, (u8 *)a, sizeof(a));
 }

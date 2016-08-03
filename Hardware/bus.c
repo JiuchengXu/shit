@@ -20,6 +20,6 @@ char bus_recieve(void)
 
 void register_bus(void *send, void *recv)
 {
-	bus.recv = recv;
-	bus.send = send;
+	bus.recv = (char (*)(void))recv;
+	bus.send = (void (*)(char *, int))send;
 }

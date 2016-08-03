@@ -3,12 +3,6 @@
 
 #include "includes.h"
 
-//#define GUN
-
-#ifndef GUN
-#define CLOTHE
-#endif
-
 void get_key_sn(char *sn);
 void get_ip_suffix(char *s);
 
@@ -117,5 +111,15 @@ void esp8266_gpio_init(void);
 void update_esp8266(void);
 
 void work_esp8266(void);
+
+void int2chars(char *str, int v, int len);
+
+void str2chars(char *dst, char *str);
+
+u32 char2u32(char *s, s8 bit_len);
+void err_log(char *log);
+
+void flash_bytes_read(u32 addr, u8 *buf, u16 len);
+void flash_page_write(uint32_t page, uint8_t *data);
 
 #endif

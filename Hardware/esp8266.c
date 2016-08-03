@@ -1,4 +1,3 @@
-#include <os.h>
 #include "includes.h"
 #include "delay.h"
 #include "net.h"
@@ -16,11 +15,6 @@ struct ip_port_map ip_map[20];
 static char temp[100];
 static char output[2048];
 static u8 gID;
-
-void err_log(char *s)
-{
-	
-}
 
 s8 close_udp(u8 id);
 
@@ -347,7 +341,7 @@ char data_i[100];
 
 void send_test(void)
 {
-	u32 ip = (192 << 24) | (168 << 16) | (1 << 8) | 20;
+	u32 ip = ((u32)192 << 24) | ((u32)168 << 16) | ((u32)1 << 8) | 20;
 	u16 src_port;
 	u16 port = 8888;
 	char data[] = "hello world!";
@@ -366,32 +360,32 @@ void send_test(void)
 
 void update_esp8266(void)
 {
-	GPIO_WriteBit(GPIOB, GPIO_Pin_0, 0);
+	GPIO_WriteBit(GPIOB, GPIO_Pin_0, Bit_RESET);
 }
 
 void work_esp8266(void)
 {
-	GPIO_WriteBit(GPIOB, GPIO_Pin_0, 1);
+	GPIO_WriteBit(GPIOB, GPIO_Pin_0, Bit_SET);
 }
 
 void enbale_esp8266(void)
 {
-	GPIO_WriteBit(GPIOA, GPIO_Pin_8, 1);
+	GPIO_WriteBit(GPIOA, GPIO_Pin_8, Bit_SET);
 	//GPIO_WriteBit(GPIOB, GPIO_Pin_8, 0);
 }
 
 void disable_esp8266(void)
 {
-	GPIO_WriteBit(GPIOA, GPIO_Pin_8, 0);
+	GPIO_WriteBit(GPIOA, GPIO_Pin_8, Bit_RESET);
 }
 
 void reset_esp8266(void)
 {
-	GPIO_WriteBit(GPIOA, GPIO_Pin_12, 1);
+	GPIO_WriteBit(GPIOA, GPIO_Pin_12, Bit_SET);
 	msleep(100);
-	GPIO_WriteBit(GPIOA, GPIO_Pin_12, 0);
+	GPIO_WriteBit(GPIOA, GPIO_Pin_12, Bit_RESET);
 	msleep(100);
-	GPIO_WriteBit(GPIOA, GPIO_Pin_12, 1);
+	GPIO_WriteBit(GPIOA, GPIO_Pin_12, Bit_SET);
 }
 
 void esp8266_gpio_init(void)
@@ -412,15 +406,15 @@ void esp8266_gpio_init(void)
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);	
 	
-	//update_esp8266();
-	work_esp8266();
-	GPIO_WriteBit(GPIOA, GPIO_Pin_4, 0);
+	update_esp8266();
+	//work_esp8266();
+	GPIO_WriteBit(GPIOA, GPIO_Pin_4, Bit_RESET);
 	enbale_esp8266();
 	msleep(100);	
 	reset_esp8266();
 	
-	set_bound();
-	esp_reset();
+	//set_bound();
+	//esp_reset();
 
 	//while (1)
 	//	sleep(1);

@@ -7,7 +7,6 @@ void  AppTaskStart (void *p_arg)
 {
     CPU_INT32U  cpu_clk_freq;
     CPU_INT32U  cnts;
-    OS_ERR      err;
 
    (void)p_arg;
 

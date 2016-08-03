@@ -106,7 +106,6 @@ void reset_buffer(void)
 
 void uart_inint(void)
 {
-	OS_ERR err;
 	u32 bound = 115200;
 	
 	GPIO_InitTypeDef GPIO_InitStructure;

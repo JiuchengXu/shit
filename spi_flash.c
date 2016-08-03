@@ -1,7 +1,8 @@
 #include "stm32f10x.h"
 
-#define FLASH_SECTOR_SIZE	512
-#define FLASH_SECTOR_COUNT	4096
+#define FLASH_PAGE_SIZE		256
+#define FLASH_SECTOR_SIZE	4096
+#define FLASH_SECTOR_COUNT	2048
 
 
 /* Select SPI FLASH: ChipSelect pin low  */
@@ -29,16 +30,19 @@
 #define W25X_ManufactDeviceID	0x90 
 #define W25X_JedecDeviceID		0x9F
 
-#define Dummy_Byte								0xA5
+#define Dummy_Byte								0x00
 
 void SPI3_init(void)
-{
+{	
 	SPI_InitTypeDef  SPI_InitStructure;
 	GPIO_InitTypeDef GPIO_InitStructure;
 
 	/* Enable SPI3 GPIOA and GPIOB clocks */
+
+	//RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB | RCC_APB2Periph_AFIO, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB , ENABLE);
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB, ENABLE);
+	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
 
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_4 | GPIO_Pin_3;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
@@ -71,7 +75,7 @@ void SPI3_init(void)
 	//  SPI_DMACmd(SPI3, SPI_DMAReq_Rx | SPI_DMAReq_Tx, ENABLE);
 
 	/* Enable SPI3  */
-	SPI_Cmd(SPI3, ENABLE);  
+	SPI_Cmd(SPI3, ENABLE);
 }
 
 int32_t SPIFLASH_disk_initialize(void)
@@ -104,53 +108,105 @@ uint8_t spi_read_byte(void)
   return (spi_write_byte(Dummy_Byte));
 }
 
-void FlashWaitBusy(void)
+void flash_write_enable(void)
 {
-	NotSelect_Flash();
 	Select_Flash();
-	  
-	spi_write_byte(W25X_ReadStatusReg);    //???????????     
-	
-	while ((spi_read_byte() & 0x01) == 0x01);
-	
+	spi_write_byte(W25X_WriteEnable);    //???????????   
 	NotSelect_Flash();	
 }
 
-void flash_page_read_si(uint32_t sector,uint8_t *data)
+void flash_write_disable(void)
+{
+	Select_Flash();
+	spi_write_byte(W25X_WriteDisable); 
+	NotSelect_Flash();
+}
+
+void FlashWaitBusy(void)
+{
+	u8 val;
+
+	while (1) {
+		Select_Flash();
+		spi_write_byte(W25X_ReadStatusReg);    //???????????     
+	
+		val = spi_read_byte() & 0x01;
+		
+		NotSelect_Flash();
+		
+		if (val != 0x01)
+			break;
+	}
+}
+
+void FlashWEL(void)
+{
+	u8 val;
+	
+	flash_write_enable();
+	
+	while (1) {
+		Select_Flash();
+		spi_write_byte(W25X_ReadStatusReg);    //???????????     
+		
+		val = spi_read_byte() & 0x02;
+		
+		NotSelect_Flash();
+		
+		if (val & 0x02)
+			break;
+	}
+}
+
+void flash_page_read(uint32_t page, uint8_t *data)
 {
 	uint32_t i;
 
-	u32 ReadAddr = sector * FLASH_SECTOR_SIZE;
-	
-	FlashWaitBusy();
-	Select_Flash();
+	u32 ReadAddr = page * FLASH_PAGE_SIZE;
 
+	FlashWaitBusy();
+	
+	Select_Flash();	
+	
     spi_write_byte(W25X_ReadData);         //??????   
     spi_write_byte((u8)((ReadAddr)>>16));  //??24bit??    
     spi_write_byte((u8)((ReadAddr)>>8));   
     spi_write_byte((u8)ReadAddr);   
 	
-    for(i = 0; i < FLASH_SECTOR_SIZE; i++)
+    for(i = 0; i < FLASH_PAGE_SIZE; i++)
         data[i] = spi_read_byte();   //????  
 	
 	NotSelect_Flash();
 }
 
-void flash_page_read_mu(uint32_t sector,uint8_t count,uint8_t *data)
+void flash_bytes_read(u32 addr, u8 *buf, u16 len)
 {
 	uint32_t i;
+
+	u32 ReadAddr = addr;
+
+	FlashWaitBusy();
 	
-	for (i = 0; i < count; i++)
-	{
-		flash_page_read_si(sector+i,((uint8_t *)data + FLASH_SECTOR_SIZE * i));
-	}	
+	Select_Flash();	
 	
+    spi_write_byte(W25X_ReadData);         //??????   
+    spi_write_byte((u8)((ReadAddr)>>16));  //??24bit??    
+    spi_write_byte((u8)((ReadAddr)>>8));   
+    spi_write_byte((u8)ReadAddr);   
+	
+    for(i = 0; i < len; i++)
+        buf[i] = spi_read_byte();   //????  
+	
+	NotSelect_Flash();	
 }
-void flash_page_write_si(uint32_t sector,uint8_t *data)
+
+void flash_page_write(uint32_t page, uint8_t *data)
 {
 	uint16_t i;	
-	u32 WriteAddr = sector * FLASH_SECTOR_SIZE;
+	u32 WriteAddr = page * FLASH_PAGE_SIZE;
 
+	FlashWEL();
+	
 	FLASH_CS_0();
 
     spi_write_byte(W25X_PageProgram);      //??????   
@@ -158,45 +214,73 @@ void flash_page_write_si(uint32_t sector,uint8_t *data)
     spi_write_byte((u8)((WriteAddr)>>8));   
     spi_write_byte((u8)WriteAddr);   
 	
-    for(i = 0; i < FLASH_SECTOR_SIZE; i++)
+    for(i = 0; i < FLASH_PAGE_SIZE; i++)
 		spi_write_byte(data[i]);
 
 	FLASH_CS_1();
-
-	FlashWaitBusy();	
-
+	FlashWaitBusy();
 }
-void flash_page_write_mu(uint32_t sector,uint8_t count,uint8_t *data)
-{
-	uint32_t index;
 
-	for (index = 0; index < count; index++)
-	{
-		/* only supply single block write: block size 512Byte */
-		flash_page_read_si((sector + index), ((uint8_t *) data + index * FLASH_SECTOR_SIZE));
-	}
+void flash_sector_erase(uint32_t sector)
+{
+	u32 WriteAddr = sector * FLASH_PAGE_SIZE;
+
+	FlashWEL();
+	
+	FLASH_CS_0();
+	
+    spi_write_byte(W25X_SectorErase);      //??????   
+    spi_write_byte((u8)((WriteAddr)>>16)); //??24bit??    
+    spi_write_byte((u8)((WriteAddr)>>8));   
+    spi_write_byte((u8)WriteAddr);   	
+	
+	FLASH_CS_1();
+	FlashWaitBusy();	
+}
+
+void flash_chip_erase(void)
+{
+	FlashWEL();
+	
+	FLASH_CS_0();
+	
+    spi_write_byte(W25X_ChipErase);  
+  		
+	FLASH_CS_1();
+	FlashWaitBusy();	
 }
 
 u32 SPI_FLASH_ReadDeviceID(void)
 {
-  u32 Temp = 0;
+	u32 Temp = 0;
+	
+	/* Select the FLASH: Chip Select low */
+	Select_Flash();   //????,?????
+	
+	/* Send "RDID " instruction */
+	spi_write_byte(0x90);//??????ID,???????????ID?(??????) 0XAB
+	spi_write_byte(Dummy_Byte);     //??3???????,25X16????24??,??????????,?????????DEVICEID!
+	spi_write_byte(Dummy_Byte);
+	spi_write_byte(0);
+	
+	/* Read a byte from the FLASH */
+	Temp = spi_read_byte();
+	Temp <<= 8;
+	Temp |= spi_read_byte(); 
+	
+	/* Deselect the FLASH: Chip Select high */
+	NotSelect_Flash();
+	
+	return Temp;
+}
 
-  /* Select the FLASH: Chip Select low */
-  Select_Flash();   //????,?????
+u8 spi_data[256] = "abcdefghijklmnopqrstuvwxyz";
+u8 spi_r_data[256];
 
-  /* Send "RDID " instruction */
-  spi_write_byte(0x90);//??????ID,???????????ID?(??????) 0XAB
-  spi_write_byte(Dummy_Byte);     //??3???????,25X16????24??,??????????,?????????DEVICEID!
-  spi_write_byte(Dummy_Byte);
-  spi_write_byte(0);
-  
-  /* Read a byte from the FLASH */
-  Temp = spi_read_byte();
-  Temp <<= 8;
-  Temp |= spi_read_byte(); 
-
-  /* Deselect the FLASH: Chip Select high */
-  NotSelect_Flash();
-
-  return Temp;
+void spi_flash_test(void)
+{
+	flash_sector_erase(0);
+	
+	flash_page_write(0, spi_data);
+	flash_page_read(0, spi_r_data);
 }

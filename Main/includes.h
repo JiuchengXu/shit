@@ -32,11 +32,18 @@ typedef    signed  long  long  s64;                      /* 64-bit   signed inte
 
 #include <os_app_hooks.h>
 
+#define GUN
+
+#ifndef GUN
+#define CLOTHE
+#endif
+
 #include "priority.h"
 #include "usart.h"	
 #include "led.h"
 #include "delay.h"
 #include "task.h"
+#include "net.h"
 
 
 

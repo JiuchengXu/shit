@@ -1,32 +1,25 @@
-#include "stm32f10x.h"
-#include "i2s.h"
+#include "includes.h"
+#include "wav.h"
+#include "stm32f10x_dma.h"
 
-#if 0
-static void I2S_GPIO_Config(void);
-static void I2S_Mode_Config(void);
+#ifdef GUN
 
-static uint8_t  buffer[1024*4]; 		// 文件缓冲区
-static short   outBuf[2][2500];		    // PCM流缓冲，使用两个缓冲区 
-static int bufflag = 0;
-#if 0
-/**
-  * @brief  I2S_Bus_Init 初始化iis总线
-  * @param  none
-  * @retval none
-  */
-void I2S_Bus_Init(void)
-{
-	/* 配置I2S GPIO用到的引脚 */
-	I2S_GPIO_Config(); 
+DMA_InitTypeDef DMA_InitStructure;
+static u32 AudioTotalSize=0xFFFF; 
+static u32 AudioRemSize  =0; 
+static u16 *CurrentPos;  
 
-	/* 配置I2S工作模式 */
-	I2S_Mode_Config();
+u16 buffer1[1024];
+u16 buffer2[1024];
 
-	I2S_Cmd(SPI2, ENABLE);
+__IO u32 WaveLen;
+__IO u32 XferCplt;
+__IO u32 DataOffset;
+__IO u32 WaveCounter;
 
-	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
-}
+u8 buffer_switch;
 
+WAVE_TypeDef WAVE_Format;
 
 /**
   * @brief  I2S_Stop 停止iis总线
@@ -36,7 +29,7 @@ void I2S_Bus_Init(void)
 void I2S_Stop(void)
 {		
 	/* 禁能 SPI2/I2S2 外设 */
-	SPI_I2S_DMACmd(SPI2, SPI_I2S_DMAReq_Tx, DISABLE);
+	//SPI_I2S_DMACmd(SPI2, SPI_I2S_DMAReq_Tx, DISABLE);
 	I2S_Cmd(SPI2, DISABLE);	
 
 	DMA_Cmd(DMA1_Channel5, DISABLE);
@@ -54,7 +47,7 @@ void I2S_Freq_Config(uint16_t SampleFreq)
 
 	I2S_Stop();
 	I2S_InitStructure.I2S_Mode = I2S_Mode_MasterTx;					// 配置I2S工作模式
-	I2S_InitStructure.I2S_Standard = I2S_Standard_LSB;				// 接口标准 
+	I2S_InitStructure.I2S_Standard = I2S_Standard_Phillips;				// 接口标准 
 	I2S_InitStructure.I2S_DataFormat = I2S_DataFormat_16b;			// 数据格式，16bit 
 	I2S_InitStructure.I2S_MCLKOutput = I2S_MCLKOutput_Enable;		// 主时钟模式 
 	I2S_InitStructure.I2S_AudioFreq = SampleFreq;					// 音频采样频率 
@@ -64,7 +57,6 @@ void I2S_Freq_Config(uint16_t SampleFreq)
 	I2S_Cmd(SPI2, ENABLE);	//使能iis总线
 }
 
-
 /**
   * @brief  DMA_I2S_Configuration 配置DMA总线
   * @param  addr:数据源地址
@@ -73,7 +65,13 @@ void I2S_Freq_Config(uint16_t SampleFreq)
   */
 void DMA_I2S_Configuration(uint32_t addr, uint32_t size)
 {
-    DMA_InitTypeDef DMA_InitStructure;				  
+	NVIC_InitTypeDef NVIC_InitStructure;				  
+
+	NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel5_IRQn;
+  	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;//?????(0 ??)
+  	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;//????(0 ??)
+  	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  	NVIC_Init(&NVIC_InitStructure);   
 
     /* DMA 通道配置*/
     DMA_Cmd(DMA1_Channel5, DISABLE);
@@ -85,14 +83,14 @@ void DMA_I2S_Configuration(uint32_t addr, uint32_t size)
     DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
     DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
     DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
+	//DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
     DMA_InitStructure.DMA_Priority = DMA_Priority_VeryHigh;
     DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
     DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
     DMA_Init(DMA1_Channel5, &DMA_InitStructure);
-
+	DMA_ITConfig(DMA1_Channel5, DMA_IT_TC, ENABLE);//????DMA???
+	
     SPI_I2S_DMACmd(SPI2, SPI_I2S_DMAReq_Tx, ENABLE);	//使能DMA请求
-
-    DMA_Cmd(DMA1_Channel5, ENABLE);
 }
 
 /**
@@ -105,7 +103,7 @@ static void I2S_GPIO_Config(void)
 	GPIO_InitTypeDef GPIO_InitStructure;
 	
 	/* Enable GPIOB, GPIOC */
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC|RCC_APB2Periph_GPIOB , ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC|RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOC, ENABLE);
 	
 	/* 打开 I2S2 APB1 时钟 */
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
@@ -119,6 +117,13 @@ static void I2S_GPIO_Config(void)
 	/* I2S2 MCK  */
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
 	GPIO_Init(GPIOC, &GPIO_InitStructure);
+	
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+	GPIO_Init(GPIOC, &GPIO_InitStructure);
+	
+	GPIO_ResetBits(GPIOC, GPIO_Pin_12);
 }
 
 /**
@@ -132,75 +137,215 @@ static void I2S_Mode_Config(void)
 			
 	/* I2S2 外设配置 */
 	I2S_InitStructure.I2S_Mode = I2S_Mode_MasterTx;					// 配置I2S工作模式 
-	I2S_InitStructure.I2S_Standard = I2S_Standard_LSB;				// 接口标准 
+	I2S_InitStructure.I2S_Standard = I2S_Standard_Phillips;				// 接口标准 
 	I2S_InitStructure.I2S_DataFormat = I2S_DataFormat_16b;			// 数据格式，16bit
 	I2S_InitStructure.I2S_MCLKOutput = I2S_MCLKOutput_Enable;		// 主时钟模式 
 	I2S_InitStructure.I2S_AudioFreq = I2S_AudioFreq_44k;			// 音频采样频率
 	I2S_InitStructure.I2S_CPOL = I2S_CPOL_Low;  					// 默认为低	
 	I2S_Init(SPI2, &I2S_InitStructure);
-
 }
 
-static void mp3_player(const char *filename)
+/**
+  * @brief  I2S_Bus_Init 初始化iis总线
+  * @param  none
+  * @retval none
+  */
+void I2S_Bus_Init(void)
 {
-	int err, i, outputSamps, current_sample_rate = 0;	
-	int flag = 1;	//读完一个文件跳出大循环的标志
-	int count = 0;//循环次数，设置音量时需要
-	int				read_offset = 0;				/* 读偏移指针*/
-	int				bytes_left = 0;					/* 剩余字节数*/	
-	unsigned long	Frames = 0;						/* mP3帧计数*/
-	unsigned char	*read_ptr = buffer;				/* 缓冲区指针*/
-	HMP3Decoder		Mp3Decoder;						/* mp3解码器指针*/
+	/* 配置I2S GPIO用到的引脚 */
+	I2S_GPIO_Config(); 
+
+	/* 配置I2S工作模式 */
+	I2S_Mode_Config();
+
+	I2S_Cmd(SPI2, ENABLE);
+
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
 	
-	while (1)
-	{		
-		//读取mp3文件
-		fres = f_read(&file, buffer, sizeof(buffer), &rw_num);
-		if(fres != FR_OK)
-		{
-			printf("读取%s失败！ %d\r\n",filename,fres);
-			return;
-		}
-		
-		read_ptr = buffer;									//指向mp3输入流
-		bytes_left = rw_num;								//实际读到的输入流大小大小
-
-		//按帧处理	
-		while(1)	//循环2
-		{							
-				if (outputSamps > 0)
-				{
-					if (Mp3FrameInfo.nChans == 1)	//单声道
-					{
-						//单声道数据需要复制一份到另一个声道
-						for (i = outputSamps - 1; i >= 0; i--)
-						{
-							outBuf[bufflag][i * 2] = outBuf[bufflag][i];
-							outBuf[bufflag][i * 2 + 1] = outBuf[bufflag][i];
-						}
-						outputSamps *= 2;
-					}
-				
-					//非单声道数据可直接由DMA传输到IIS交给DAC
-					/* 等待DMA播放完，这段时间我们可以干其他的事，扫描事件进行处理 */
-					while((DMA1_Channel5->CCR&DMA_CCR1_EN) && !(DMA1->ISR&DMA1_IT_TC5));
-						
-					/*DMA传输完毕*/
-					DMA_ClearFlag(DMA1_FLAG_TC5 | DMA1_FLAG_TE5);
-					DMA_I2S_Configuration((uint32_t)outBuf[bufflag], outputSamps);
-					bufflag = 1 - bufflag;	//切换buffer
-					
-					//加上以下这两行代码就可以初始化播放音量,神奇之处!!
-					//意思是要执行两次上面的代码才能使设置音量有效，估计是DMA传输要执行两次，一次不行~~~根本原因不详~~
-					if (count++ == 1)
-						PCM1770_VolumeSet(30);
-				}
-			}
-		}
-	}
-
-	I2S_Stop();
+	DMA_I2S_Configuration(0, 0xFFFE);
 }
 
-#endif
+uint32_t AUDIO_Play(u16* pBuffer, u32 Size)
+{
+  	AudioTotalSize=Size; 
+  	Audio_MAL_Play((u32)pBuffer,(u32)(DMA_MAX(Size/4)));//??????????
+  	AudioRemSize=(Size/2)-DMA_MAX(AudioTotalSize);//???????
+  	CurrentPos=pBuffer+DMA_MAX(AudioTotalSize);//???????? 
+  	return 0;
+}
+
+//???????????
+void Audio_MAL_Play(u32 Addr, u32 Size)
+{	
+  	DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)Addr;//??????????
+  	DMA_InitStructure.DMA_BufferSize = (uint32_t)Size/2;
+  	DMA_Init(DMA1_Channel5, &DMA_InitStructure);
+  	DMA_Cmd(DMA1_Channel5, ENABLE);//I2S DMA??   
+	
+  	if ((SPI2->I2SCFGR & I2S_ENABLE_MASK) == 0)
+		I2S_Cmd(SPI2, ENABLE);//?I2S?????,???
+}
+
+u8 WaveParsing(void)
+{
+  	u32 temp=0x00;
+  	u32 extraformatbytes=0;
+
+  	temp=ReadUnit((u8*)buffer1,0,4,BigEndian);//?'RIFF'
+  	if(temp!=CHUNK_ID)return 1;
+	
+  	WAVE_Format.RIFFchunksize=ReadUnit((u8*)buffer1,4,4,LittleEndian);//?????
+	
+  	temp=ReadUnit((u8*)buffer1,8,4,BigEndian);//?'WAVE'
+  	if(temp!=FILE_FORMAT)return 2;
+	
+  	temp=ReadUnit((u8*)buffer1,12,4,BigEndian);//?'fmt '
+	
+  	if(temp!=FORMAT_ID)return 3;
+	
+  	temp=ReadUnit((u8*)buffer1,16,4,LittleEndian);//?'fmt'????
+	
+  	if(temp!=0x10)extraformatbytes=1;
+	
+  	WAVE_Format.FormatTag=ReadUnit((u8*)buffer1,20,2,LittleEndian);//?????
+	
+  	if(WAVE_Format.FormatTag!=WAVE_FORMAT_PCM)return 4;  
+	
+  	WAVE_Format.NumChannels=ReadUnit((u8*)buffer1,22,2,LittleEndian);//???? 
+	WAVE_Format.SampleRate=ReadUnit((u8*)buffer1,24,4,LittleEndian);//????
+	WAVE_Format.ByteRate=ReadUnit((u8*)buffer1,28,4,LittleEndian);//????
+	WAVE_Format.BlockAlign=ReadUnit((u8*)buffer1,32,2,LittleEndian);//????
+	WAVE_Format.BitsPerSample=ReadUnit((u8*)buffer1,34,2,LittleEndian);//??????
+	
+	if(WAVE_Format.BitsPerSample!=BITS_PER_SAMPLE_16)return 5;
+	
+	DataOffset=36;
+	
+	if(extraformatbytes==1)
+	{
+		temp=ReadUnit((u8*)buffer1,36,2,LittleEndian);//???????
+		if(temp!=0x00)return 6;
+		temp=ReadUnit((u8*)buffer1,38,4,BigEndian);//?'fact'
+		//if(temp!=FACT_ID)return 7;
+		temp=ReadUnit((u8*)buffer1,42,4,LittleEndian);//?Fact????
+		DataOffset+=10+temp;
+	}
+	
+	temp=ReadUnit((u8*)buffer1,DataOffset,4,BigEndian);//?'data'
+	
+	DataOffset+=4;
+	
+	if(temp!=DATA_ID)return 8;
+	
+	WAVE_Format.DataSize=ReadUnit((u8*)buffer1,DataOffset,4,LittleEndian);//???????
+	DataOffset+=4;
+	WaveCounter=DataOffset;
+	
+	return 0;
+}
+
+u32 ReadUnit(u8 *buffer,u8 idx,u8 NbrOfBytes,Endianness BytesFormat)
+{
+  	u32 index=0;
+  	u32 temp=0;
+  
+  	for(index=0;index<NbrOfBytes;index++)temp|=buffer[idx+index]<<(index*8);
+  	if (BytesFormat == BigEndian)temp= __REV(temp);
+  	return temp;
+}
+
+void AUDIO_TransferComplete(u32 pBuffer, u32 Size)
+{  
+  	XferCplt=1;
+  	if(WaveLen)WaveLen-=1024;
+  	if(WaveLen<1024) WaveLen=0;
+}
+
+void SPI2_IRQHandler(void)
+{
+  	if (SPI_I2S_GetFlagStatus(SPI2,SPI_I2S_FLAG_TXE)!=RESET)
+  	{     	
+    	SPI_I2S_SendData(SPI2, 0);//??????I2S 
+  	}
+}
+
+void DMA1_Channel5_IRQHandler(void)
+{    	
+  	if (DMA_GetFlagStatus(DMA1_FLAG_TC5) != RESET)
+  	{         
+	    	if (AudioRemSize > 0)
+	    	{   
+  
+	      		DMA_ClearFlag(DMA1_FLAG_TC5);//?????????           
+	      		DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t) CurrentPos;//????????????
+	      		DMA_InitStructure.DMA_BufferSize = (uint32_t) (DMA_MAX(AudioRemSize));            
+	      		DMA_Init(DMA1_Channel5, &DMA_InitStructure);
+	      		DMA_Cmd(DMA1_Channel5, ENABLE);    
+	      		CurrentPos += DMA_MAX(AudioRemSize);//??????        
+	      		AudioRemSize -= DMA_MAX(AudioRemSize);//??????   
+	      		DMA_Cmd(DMA1_Channel5, ENABLE); 
+	    	}
+	    	else//??????
+	    	{
+	      		DMA_Cmd(DMA1_Channel5, DISABLE);   
+	      		DMA_ClearFlag(DMA1_FLAG_TC5);      
+	      		AUDIO_TransferComplete((uint32_t)CurrentPos, 0);       
+	    	}
+  	}
+}
+
+void wav_pre_read(void)
+{
+	u32 index = 0;
+
+	flash_bytes_read(index, (u8 *)buffer1, 0x100);
+	
+	while(WaveParsing());
+	
+  	WaveLen = WAVE_Format.DataSize;
+	
+  	I2S_Freq_Config(WAVE_Format.SampleRate);	
+}
+
+void wav_play(void)
+{
+	u32 index = 0;
+	u8 i=0;
+	
+	WaveLen = 0;
+	XferCplt = 0;
+	DataOffset = 0;
+	buffer_switch = 1;
+	
+	index = DataOffset;
+	
+	flash_bytes_read(index, (u8 *)buffer1, 1024);
+	index += 1024;
+	flash_bytes_read(index, (u8 *)buffer2, 1024);
+	
+  	Audio_MAL_Play((u32)buffer1, 1024);
+  	buffer_switch=1;
+  	XferCplt=0;  
+  	while(WaveLen!=0)
+  	{ 
+	      	while(XferCplt==0);//??DMA????
+	      	XferCplt=0;
+	      	if(buffer_switch==0)
+	      	{
+		        	Audio_MAL_Play((u32)buffer1,1024);//?buffer1??
+					index += 1024;
+		        	flash_bytes_read(index, (u8 *)buffer2, 1024);
+		        	buffer_switch=1;
+	      	}
+	      	else 
+	      	{   
+		        	Audio_MAL_Play((u32)buffer2,1024);//?buffer2??
+					index += 1024;
+		        	flash_bytes_read(index, (u8 *)buffer1, 1024);
+		        	buffer_switch=0;
+	      	} 
+		i++;
+  	}
+}
+
 #endif

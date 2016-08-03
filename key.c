@@ -1,9 +1,6 @@
 #include "includes.h"
 #include "delay.h"
 
-
-#define OS_TASK_STACK_SIZE     16
-
 struct eeprom_key_info {
 	char sn[16];
 	char user_id[16];
@@ -22,11 +19,6 @@ enum {
 static struct eeprom_key_info key;
 
 char eeprom[] = "1234567890abcdefasdfghjklqwertyu021100100";
-static int insert_flag = 0;
-
-static CPU_STK  TaskStk[OS_TASK_STACK_SIZE];
-static OS_TCB TaskStkTCB;
-
 
 void read_key_from_eeprom(void)
 {
