@@ -18,7 +18,7 @@ enum {
 
 static struct eeprom_key_info key;
 
-char eeprom[] = "1234567890abcdefasdfghjklqwertyu021100100";
+char eeprom[] = "SN145784541458720000018092719086250100100";
 
 void read_key_from_eeprom(void)
 {

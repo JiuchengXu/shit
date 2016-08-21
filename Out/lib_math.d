@@ -1,0 +1,13 @@
+.\out\lib_math.o: uCOS\LIB\lib_math.c
+.\out\lib_math.o: .\uCOS\LIB\lib_math.h
+.\out\lib_math.o: .\uCOS\CPU\cpu.h
+.\out\lib_math.o: .\uCOS\CPU\cpu_def.h
+.\out\lib_math.o: .\uCOS\CPU\cpu_cfg.h
+.\out\lib_math.o: .\uCOS\CPU\cpu_core.h
+.\out\lib_math.o: .\uCOS\LIB\lib_def.h
+.\out\lib_math.o: .\uCOS\LIB\lib_mem.h
+.\out\lib_math.o: .\uCOS\CPU\cpu_core.h
+.\out\lib_math.o: .\Main\app_cfg.h
+.\out\lib_math.o: .\uCOS\LIB\lib_cfg.h
+.\out\lib_math.o: .\uCOS\LIB\lib_str.h
+.\out\lib_math.o: .\uCOS\LIB\lib_ascii.h

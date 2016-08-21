@@ -3,13 +3,13 @@
 
 #ifdef CLOTHE
 
-#define HOST_IP		(((u32)192 << 24) | ((u32)168 << 16) | ((u32)1 << 8) | 20)
+#define HOST_IP		(((u32)192 << 24) | ((u32)168 << 16) | ((u32)1 << 8) | 101)
 
 #define GUN_IP		(((u32)192 << 24) | ((u32)168 << 16) | ((u32)4 << 8) | 2)
 #define RIFLE_IP	(((u32)192 << 24) | ((u32)168 << 16) | ((u32)4 << 8) | 3)
 #define LCD_IP		(((u32)192 << 24) | ((u32)168 << 16) | ((u32)4 << 8) | 5)
 
-#define HOST_PORT			(u16)8888
+#define HOST_PORT			(u16)5335
 #define GUN_PORT			(u16)8889
 #define RIFLE_PORT			(u16)8890
 #define LCD_PORT			(u16)8891
@@ -67,6 +67,7 @@ static int active_request(void)
 	
 	INT2CHAR(data.transMod, 0);
 	INT2CHAR(data.packTye, ACTIVE_REQUEST_TYPE);
+	get_key_sn(data.keySN);
 	INT2CHAR(data.packageID, packageID++);
 	
 	return sendto_host((char *)&data, sizeof(data));
@@ -108,6 +109,7 @@ static u8 get_power(void)
 	return 100;
 }
 
+static char test_string[] = "03011100028SN0000000000000100010002000300040005000600070008000900101234567012345671123456721234567312345674123456751234567612345677123456781234567967";
 static int upload_status_data(void)
 {
 	struct ClothesStatusData data;
@@ -121,6 +123,8 @@ static int upload_status_data(void)
 	INT2CHAR(data.deviceSubType, get_deviceSubType());
 	INT2CHAR(data.lifeLeft, (int)get_lifeLeft());
 	get_key_sn(data.keySN);
+	
+	memcpy(&data, test_string, sizeof(data));
 
 	INT2CHAR(data.PowerLeft, get_power());
 	
@@ -192,6 +196,7 @@ static void recv_host_handler(char *buf, u16 len)
 	if (packTye == ACTIVE_RESPONSE_TYPE) {
 		actived = 1;
 		characCode = (u16)char2u32(data->characCode, sizeof(data->characCode));
+		set_time(data->curTime, sizeof(data->curTime));
 	}
 }
 
@@ -258,6 +263,9 @@ static void hb_task(void)
 		
 		if (i > 400)
 			i = 0;
+		
+		if (i == 200)
+			reduce_blod(5);
 	}
 }
 	
@@ -273,6 +281,9 @@ static void net_init(void)
 	
 	get_ip_suffix(&ip[10]);
 	
+	if (set_bound() < 0)
+		err_log("set_bound");
+	
 	if (set_auto_conn(0) < 0)
 		err_log("set_echo");
 	
@@ -284,6 +295,9 @@ static void net_init(void)
 	
 	if (set_mode(3) < 0)
 		err_log("set_mode");
+	
+	if (set_mac_addr() < 0)
+		err_log("set_mac_addr");
 	
 	if (connect_ap(host, host_passwd, 3) < 0)
 		err_log("connect_ap");

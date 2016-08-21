@@ -32,6 +32,7 @@ s8 get_key_blod(void);
 struct ActiveRequestData {
 	char transMod [1];
 	char packTye[1];
+	char keySN[16];
 	char packageID [4];
 };
 
@@ -93,15 +94,11 @@ struct HeartBeat {
 };
 
 void red_led_on(void);
-
 void green_led_on(void);
-
 void yellow_led_on(void);
 
 void int2chars(char *str, int v, int len);
-
 void str2chars(char *dst, char *str);
-
 u32 char2u32(char *s, s8 bit_len);
 
 void reduce_blod(s8 i);
@@ -109,17 +106,14 @@ void reduce_blod(s8 i);
 void esp8266_gpio_init(void);
 
 void update_esp8266(void);
-
 void work_esp8266(void);
 
-void int2chars(char *str, int v, int len);
-
-void str2chars(char *dst, char *str);
-
-u32 char2u32(char *s, s8 bit_len);
 void err_log(char *log);
 
 void flash_bytes_read(u32 addr, u8 *buf, u16 len);
 void flash_page_write(uint32_t page, uint8_t *data);
+
+void set_time(char *s, s8 len);
+u64 get_time(void);
 
 #endif

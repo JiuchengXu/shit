@@ -12,7 +12,7 @@ static u16 *CurrentPos;
 u16 buffer1[1024];
 u16 buffer2[1024];
 
-__IO u32 WaveLen;
+__IO u32 WaveLen, g_WaveLen;
 __IO u32 XferCplt;
 __IO u32 DataOffset;
 __IO u32 WaveCounter;
@@ -302,7 +302,7 @@ void wav_pre_read(void)
 	
 	while(WaveParsing());
 	
-  	WaveLen = WAVE_Format.DataSize;
+  	g_WaveLen = WaveLen = WAVE_Format.DataSize;
 	
   	I2S_Freq_Config(WAVE_Format.SampleRate);	
 }
@@ -312,12 +312,11 @@ void wav_play(void)
 	u32 index = 0;
 	u8 i=0;
 	
-	WaveLen = 0;
 	XferCplt = 0;
-	DataOffset = 0;
 	buffer_switch = 1;
 	
 	index = DataOffset;
+	WaveLen = g_WaveLen;
 	
 	flash_bytes_read(index, (u8 *)buffer1, 1024);
 	index += 1024;

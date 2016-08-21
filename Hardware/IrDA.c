@@ -1,5 +1,6 @@
 #include "includes.h"
 
+#ifdef CLOTHE
 void irda_init(void)
 {
 	GPIO_InitTypeDef GPIO_InitStructure;
@@ -45,3 +46,5 @@ void I2C1_EV_IRQHandler(void)
 		
 	}
 }
+
+#endif

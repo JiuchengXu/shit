@@ -1,0 +1,12 @@
+.\out\cpu_core.o: uCOS\CPU\cpu_core.c
+.\out\cpu_core.o: .\uCOS\CPU\cpu_core.h
+.\out\cpu_core.o: .\uCOS\CPU\cpu.h
+.\out\cpu_core.o: .\uCOS\CPU\cpu_def.h
+.\out\cpu_core.o: .\uCOS\CPU\cpu_cfg.h
+.\out\cpu_core.o: .\uCOS\LIB\lib_def.h
+.\out\cpu_core.o: .\uCOS\LIB\lib_mem.h
+.\out\cpu_core.o: .\uCOS\CPU\cpu_core.h
+.\out\cpu_core.o: .\Main\app_cfg.h
+.\out\cpu_core.o: .\uCOS\LIB\lib_cfg.h
+.\out\cpu_core.o: .\uCOS\LIB\lib_str.h
+.\out\cpu_core.o: .\uCOS\LIB\lib_ascii.h

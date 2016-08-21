@@ -1,0 +1,16 @@
+.\out\os_mutex.o: uCOS\Source\os_mutex.c
+.\out\os_mutex.o: .\uCOS\Source\os.h
+.\out\os_mutex.o: .\uCOS\Cfg\os_cfg.h
+.\out\os_mutex.o: .\uCOS\CPU\cpu.h
+.\out\os_mutex.o: .\uCOS\CPU\cpu_def.h
+.\out\os_mutex.o: .\uCOS\CPU\cpu_cfg.h
+.\out\os_mutex.o: .\uCOS\CPU\cpu_core.h
+.\out\os_mutex.o: .\uCOS\LIB\lib_def.h
+.\out\os_mutex.o: .\uCOS\LIB\lib_mem.h
+.\out\os_mutex.o: .\uCOS\CPU\cpu_core.h
+.\out\os_mutex.o: .\Main\app_cfg.h
+.\out\os_mutex.o: .\uCOS\LIB\lib_cfg.h
+.\out\os_mutex.o: .\uCOS\LIB\lib_str.h
+.\out\os_mutex.o: .\uCOS\LIB\lib_ascii.h
+.\out\os_mutex.o: .\uCOS\Source\os_type.h
+.\out\os_mutex.o: .\uCOS\Ports\os_cpu.h

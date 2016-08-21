@@ -85,11 +85,29 @@ s8 set_show_ip(int mode)
 }
 
 s8 connect_ap(char *id, char *passwd, s8 channel)
-{	
-	sprintf(temp, "AT+CWJAP=\"%s\",\"%s\"\r\n", id, passwd);
-	bus_send_string(temp);	
+{
+	uint8_t times = 5;
+	
+	while (times-- > 0) {	
+		sprintf(temp, "AT+CWJAP=\"%s\",\"%s\"\r\n", id, passwd);
+		bus_send_string(temp);	
 
-	sleep(30);
+		sleep(20);
+		
+		bus_recieve_string(output);
+		
+		if (str_include(output, "OK") == 0)
+			return 0;
+	}
+	return -1;
+}
+
+s8 set_mac_addr(void)
+{
+	sprintf(temp, "AT+CIPSTAMAC=\"18:fe:35:98:d3:7b\"\r\n");
+	bus_send_string(temp);
+		
+	msleep(200);
 	
 	bus_recieve_string(output);
 	
@@ -128,7 +146,7 @@ s8 set_ap(char *sid, char *passwd)
 	
 	bus_recieve_string(output);
 	
-	return str_include(output, "OK");	
+	return str_include(output, "OK");
 }
 
 extern void reset_buffer(void);
@@ -360,18 +378,19 @@ void send_test(void)
 
 void update_esp8266(void)
 {
-	GPIO_WriteBit(GPIOB, GPIO_Pin_0, Bit_RESET);
+	GPIO_WriteBit(GPIOB, GPIO_Pin_0, Bit_RESET); //update pin IO0
+	GPIO_WriteBit(GPIOA, GPIO_Pin_4, Bit_RESET); //ESP GPIO15
 }
 
 void work_esp8266(void)
 {
-	GPIO_WriteBit(GPIOB, GPIO_Pin_0, Bit_SET);
+	GPIO_WriteBit(GPIOB, GPIO_Pin_0, Bit_SET); //update pin IO0
+	GPIO_WriteBit(GPIOA, GPIO_Pin_4, Bit_RESET); //ESP GPIO15
 }
 
 void enbale_esp8266(void)
 {
 	GPIO_WriteBit(GPIOA, GPIO_Pin_8, Bit_SET);
-	//GPIO_WriteBit(GPIOB, GPIO_Pin_8, 0);
 }
 
 void disable_esp8266(void)
@@ -381,11 +400,13 @@ void disable_esp8266(void)
 
 void reset_esp8266(void)
 {
+	msleep(100);
 	GPIO_WriteBit(GPIOA, GPIO_Pin_12, Bit_SET);
 	msleep(100);
 	GPIO_WriteBit(GPIOA, GPIO_Pin_12, Bit_RESET);
-	msleep(100);
+	msleep(300);
 	GPIO_WriteBit(GPIOA, GPIO_Pin_12, Bit_SET);
+	msleep(100);
 }
 
 void esp8266_gpio_init(void)
@@ -406,16 +427,15 @@ void esp8266_gpio_init(void)
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);	
 	
-	update_esp8266();
-	//work_esp8266();
-	GPIO_WriteBit(GPIOA, GPIO_Pin_4, Bit_RESET);
+	//update_esp8266();
+	work_esp8266();
 	enbale_esp8266();
-	msleep(100);	
-	reset_esp8266();
+	reset_esp8266();	
 	
-	//set_bound();
-	//esp_reset();
+	msleep(100);
 
 	//while (1)
-	//	sleep(1);
+		//sleep(1);
+	
+	
 }

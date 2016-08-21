@@ -147,7 +147,7 @@
             <RestoreSysVw>1</RestoreSysVw>
           </Target>
           <RunDebugAfterBuild>0</RunDebugAfterBuild>
-          <TargetSelection>11</TargetSelection>
+          <TargetSelection>6</TargetSelection>
           <SimDlls>
             <CpuDll></CpuDll>
             <CpuDllArguments></CpuDllArguments>
@@ -161,7 +161,7 @@
             <PeripheralDll></PeripheralDll>
             <PeripheralDllArguments></PeripheralDllArguments>
             <InitializationFile></InitializationFile>
-            <Driver>STLink\ST-LINKIII-KEIL_SWO.dll</Driver>
+            <Driver>Segger\JL2CM3.dll</Driver>
           </TargetDlls>
         </DebugOption>
         <Utilities>
@@ -579,6 +579,11 @@
           <GroupName>Hardware</GroupName>
           <Files>
             <File>
+              <FileName>net.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Hardware\net.h</FilePath>
+            </File>
+            <File>
               <FileName>usart.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Hardware\usart.c</FilePath>
@@ -639,11 +644,6 @@
               <FilePath>.\spi_flash.c</FilePath>
             </File>
             <File>
-              <FileName>net.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\Hardware\net.h</FilePath>
-            </File>
-            <File>
               <FileName>IrDA.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Hardware\IrDA.c</FilePath>
@@ -662,6 +662,21 @@
               <FileName>38k.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Hardware\38k.c</FilePath>
+            </File>
+            <File>
+              <FileName>adx345.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardware\adx345.c</FilePath>
+            </File>
+            <File>
+              <FileName>i2c.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardware\i2c.c</FilePath>
+            </File>
+            <File>
+              <FileName>time.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardware\time.c</FilePath>
             </File>
           </Files>
         </Group>

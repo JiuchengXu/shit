@@ -1,0 +1,9 @@
+.\out\lib_str.o: uCOS\LIB\lib_str.c
+.\out\lib_str.o: .\uCOS\LIB\lib_str.h
+.\out\lib_str.o: .\uCOS\CPU\cpu.h
+.\out\lib_str.o: .\uCOS\CPU\cpu_def.h
+.\out\lib_str.o: .\uCOS\CPU\cpu_cfg.h
+.\out\lib_str.o: .\uCOS\LIB\lib_def.h
+.\out\lib_str.o: .\uCOS\LIB\lib_ascii.h
+.\out\lib_str.o: .\Main\app_cfg.h
+.\out\lib_str.o: .\uCOS\LIB\lib_cfg.h

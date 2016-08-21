@@ -53,8 +53,16 @@ void USART1_IRQHandler(void)
 
 void uart2_putc(char c)
 {
+
 	while(USART_GetFlagStatus(WIFI_USART, USART_FLAG_TXE) == RESET);
-	USART_SendData(WIFI_USART, c);  
+	USART_SendData(WIFI_USART, c);
+#if 0
+	if (c == 0x0d) {
+		c = 0x0a;
+		while(USART_GetFlagStatus(WIFI_USART, USART_FLAG_TXE) == RESET);
+		USART_SendData(WIFI_USART, c);
+	}
+#endif
 }
 
 void uart1_putc(char c)
@@ -138,7 +146,6 @@ void uart_inint(void)
 	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
 	USART_InitStructure.USART_Mode = USART_Mode_Rx|USART_Mode_Tx;
 	
-	
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
@@ -147,10 +154,7 @@ void uart_inint(void)
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
-	
-	
-	
-		
+			
 	USART_Cmd(USB_USART, ENABLE);
 	USART_Init(USB_USART, &USART_InitStructure);
 	USART_ITConfig(USB_USART, USART_IT_RXNE, ENABLE); 

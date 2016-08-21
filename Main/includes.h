@@ -32,7 +32,7 @@ typedef    signed  long  long  s64;                      /* 64-bit   signed inte
 
 #include <os_app_hooks.h>
 
-#define GUN
+//#define GUN
 
 #ifndef GUN
 #define CLOTHE

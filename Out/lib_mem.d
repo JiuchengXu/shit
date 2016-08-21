@@ -1,0 +1,12 @@
+.\out\lib_mem.o: uCOS\LIB\lib_mem.c
+.\out\lib_mem.o: .\uCOS\LIB\lib_mem.h
+.\out\lib_mem.o: .\uCOS\CPU\cpu.h
+.\out\lib_mem.o: .\uCOS\CPU\cpu_def.h
+.\out\lib_mem.o: .\uCOS\CPU\cpu_cfg.h
+.\out\lib_mem.o: .\uCOS\CPU\cpu_core.h
+.\out\lib_mem.o: .\uCOS\LIB\lib_def.h
+.\out\lib_mem.o: .\uCOS\LIB\lib_mem.h
+.\out\lib_mem.o: .\uCOS\LIB\lib_str.h
+.\out\lib_mem.o: .\uCOS\LIB\lib_ascii.h
+.\out\lib_mem.o: .\Main\app_cfg.h
+.\out\lib_mem.o: .\uCOS\LIB\lib_cfg.h

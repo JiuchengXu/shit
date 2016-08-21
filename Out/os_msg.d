@@ -1,0 +1,16 @@
+.\out\os_msg.o: uCOS\Source\os_msg.c
+.\out\os_msg.o: .\uCOS\Source\os.h
+.\out\os_msg.o: .\uCOS\Cfg\os_cfg.h
+.\out\os_msg.o: .\uCOS\CPU\cpu.h
+.\out\os_msg.o: .\uCOS\CPU\cpu_def.h
+.\out\os_msg.o: .\uCOS\CPU\cpu_cfg.h
+.\out\os_msg.o: .\uCOS\CPU\cpu_core.h
+.\out\os_msg.o: .\uCOS\LIB\lib_def.h
+.\out\os_msg.o: .\uCOS\LIB\lib_mem.h
+.\out\os_msg.o: .\uCOS\CPU\cpu_core.h
+.\out\os_msg.o: .\Main\app_cfg.h
+.\out\os_msg.o: .\uCOS\LIB\lib_cfg.h
+.\out\os_msg.o: .\uCOS\LIB\lib_str.h
+.\out\os_msg.o: .\uCOS\LIB\lib_ascii.h
+.\out\os_msg.o: .\uCOS\Source\os_type.h
+.\out\os_msg.o: .\uCOS\Ports\os_cpu.h

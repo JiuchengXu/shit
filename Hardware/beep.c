@@ -31,24 +31,25 @@ void TIM1_PWM_Init(u16 arr,u16 psc)
 
 	TIM_OC4PreloadConfig(TIM1, TIM_OCPreload_Enable);  //使能TIM1在CCR2上的预装载寄存器
  
-	//TIM_Cmd(TIM1, ENABLE);  //使能TIM3
+	TIM_Cmd(TIM1, DISABLE); 
 	
-	TIM_CtrlPWMOutputs(TIM1, ENABLE);
+	TIM_CtrlPWMOutputs(TIM1, DISABLE);
 	
-}
-
-
-void beep_init(void)
-{
-	TIM1_PWM_Init(0xa000,1000);
 }
 
 void beep_on(void)
-{
-	TIM_Cmd(TIM1, ENABLE);  //使能TIM3
+{  
+	TIM_CtrlPWMOutputs(TIM1, ENABLE);
+	TIM_Cmd(TIM1, ENABLE);
 }
 
 void beep_off(void)
 {
-	TIM_Cmd(TIM1, DISABLE);  //使能TIM3
+	TIM_Cmd(TIM1, DISABLE);  
+	TIM_CtrlPWMOutputs(TIM1, DISABLE);
+}
+
+void beep_init(void)
+{
+	TIM1_PWM_Init(0xa000,1000);
 }

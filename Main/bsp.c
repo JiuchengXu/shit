@@ -379,26 +379,35 @@ CPU_TS_TMR  CPU_TS_TmrRd (void)
 extern void wifi_init(void);
 extern void key_read_wifi_info(void);
 extern void net_init(void);
-extern void at24c02_init(void);
+extern void i2c_init(void);
+extern void at24c02_init();
 extern void SPI3_init(void);
 extern void SPI_FLASH_ReadDeviceID(void);
 extern void beep_init(void);
 extern void esp8266_gpio_init(void);
 extern void I2S_Bus_Init(void);
 extern void led_38k_init(void);
+extern void adx345_init(void);
+extern void wav_play(void);
+extern void wav_pre_read(void);
+extern void led_38k_test(void);
+
 
 void  BSP_Init (void)
 {	
 	LED_Init();
 	uart_inint();
 	esp8266_gpio_init();
+	i2c_init();
 	at24c02_init();
 	SPI3_init();
 	beep_init();
-	
+	//adx345_init();
+
 #ifdef GUN
 	led_38k_init();
 	I2S_Bus_Init();
+	wav_pre_read();
 #endif
 	
 }
