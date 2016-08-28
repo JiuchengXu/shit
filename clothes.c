@@ -3,7 +3,7 @@
 
 #ifdef CLOTHE
 
-#define HOST_IP		(((u32)192 << 24) | ((u32)168 << 16) | ((u32)1 << 8) | 101)
+#define HOST_IP		(((u32)192 << 24) | ((u32)168 << 16) | ((u32)0 << 8) | 114)
 
 #define GUN_IP		(((u32)192 << 24) | ((u32)168 << 16) | ((u32)4 << 8) | 2)
 #define RIFLE_IP	(((u32)192 << 24) | ((u32)168 << 16) | ((u32)4 << 8) | 3)
@@ -104,12 +104,7 @@ void reduce_blod(s8 i)
 		blod = 0;
 }
 
-static u8 get_power(void)
-{
-	return 100;
-}
-
-static char test_string[] = "03011100028SN0000000000000100010002000300040005000600070008000900101234567012345671123456721234567312345674123456751234567612345677123456781234567967";
+static char test_string[] = "03011100028SN1457845414587200010002000300040005000600070008000900101234567012345671123456721234567312345674123456751234567612345677123456781234567967";
 static int upload_status_data(void)
 {
 	struct ClothesStatusData data;
@@ -120,11 +115,10 @@ static int upload_status_data(void)
 	INT2CHAR(data.packTye, CLOTHES_STATUS_TYPE);
 	INT2CHAR(data.packageID, packageID++);
 	INT2CHAR(data.deviceType, 0);
-	INT2CHAR(data.deviceSubType, get_deviceSubType());
+	INT2CHAR(data.deviceSubType, get_deviceSubType());	
+	memcpy(&data, test_string, sizeof(data));
 	INT2CHAR(data.lifeLeft, (int)get_lifeLeft());
 	get_key_sn(data.keySN);
-	
-	memcpy(&data, test_string, sizeof(data));
 
 	INT2CHAR(data.PowerLeft, get_power());
 	
@@ -263,9 +257,6 @@ static void hb_task(void)
 		
 		if (i > 400)
 			i = 0;
-		
-		if (i == 200)
-			reduce_blod(5);
 	}
 }
 	
@@ -273,8 +264,8 @@ static void net_init(void)
 {
 	u8 i;
 	char sid[20] = "CSsub", passwd[20] = "12345678", \
-		host[20] = "1103", host_passwd[20] = "Q!W@E#r4", \
-	    ip[16] = "192.168.1.";
+		host[20] = "shunwei888", host_passwd[20] = "swhotels88198618", \
+	    ip[16] = "192.168.0.";
 	
 	// ip最后一位作为一个标识
 	get_ip_suffix(&sid[5]);
@@ -302,8 +293,8 @@ static void net_init(void)
 	if (connect_ap(host, host_passwd, 3) < 0)
 		err_log("connect_ap");
 	
-	if (set_ip(ip) < 0)
-		err_log("set_ip");
+//	if (set_ip(ip) < 0)
+//		err_log("set_ip");
 	
 	if (set_ap(sid, passwd) < 0)
 		err_log("set_ap");
@@ -363,7 +354,7 @@ static void start_clothe_tasks(void)
 void main_loop(void)
 {
 	s8 status = INIT;
-	
+
 	while (1) {
 		switch (status) {
 			case INIT:

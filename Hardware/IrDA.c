@@ -34,13 +34,33 @@ void irda_init(void)
 	I2C_AcknowledgeConfig(I2C1, ENABLE);
 }
 
+static volatile u16 code[10];
+static volatile u32 atime[10];
+
+static volatile u8 *pcode = (u8 *)&code, cnt;
+
+void get_charcode(u16 *c, s8 len)
+{
+	s8 i;
+	
+	for (i = 0; i < len; i++)
+		c[i] = code[i];
+}
+
 void I2C1_EV_IRQHandler(void)
 {
 	if (I2C_GetITStatus(I2C1, I2C_IT_ADDR) == SET)
 		I2C_ClearITPendingBit(I2C1, I2C_IT_ADDR);
 	else if (I2C_GetITStatus(I2C1, I2C_IT_RXNE) == SET) {
-		I2C_ClearITPendingBit(I2C1, I2C_IT_RXNE);
-		//reduce_blod((s8)I2C_ReceiveData(I2C1));
+		pcode[cnt++] = I2C_ReceiveData(I2C1);
+		
+		if (cnt == sizeof(code))
+			cnt = 0;
+		//I2C_ClearITPendingBit(I2C1, I2C_IT_RXNE);
+		if (cnt % 2 == 0) {
+			reduce_blod((s8)I2C_ReceiveData(I2C1));
+			atime[cnt / 2] = get_time();
+		}
 	} else if (I2C_GetITStatus(I2C1,I2C_IT_STOPF) == SET) {
 		I2C_ClearITPendingBit(I2C1, I2C_IT_STOPF);
 		

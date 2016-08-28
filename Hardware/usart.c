@@ -6,6 +6,7 @@
 #define BUF_LENGTH	2048
 static char RxBuf[BUF_LENGTH];
 static volatile int w_index, r_start;
+static  OS_SEM   UartSem;
 
 void (*uart1_recv_hook)(char c);
 void (*uart2_recv_hook)(char c);
@@ -25,9 +26,11 @@ int fputc(int ch, FILE *f)
 void USART2_IRQHandler(void) 
 {
 	char c;
+	OS_ERR err;
+	
+	OSIntEnter(); 
 	
 	if(USART_GetITStatus(WIFI_USART, USART_IT_RXNE) != RESET) {
-		USART_ClearFlag(WIFI_USART,USART_FLAG_ORE);  //¶Á SR
 		c = RxBuf[w_index++] = USART_ReceiveData(WIFI_USART);
 		
 		if (uart2_recv_hook)
@@ -36,19 +39,31 @@ void USART2_IRQHandler(void)
 		if (w_index == BUF_LENGTH)
 			w_index = 0;
 	}
+	
+	if (USART_GetITStatus(WIFI_USART, USART_IT_IDLE) != RESET) {
+		u32 tmp = USART2->SR;
+		tmp = USART2->DR;
+		OSSemPost(&UartSem, OS_OPT_POST_ALL, &err);
+		
+	}
+	
+	OSIntExit();
 }
 
 void USART1_IRQHandler(void) 
 { 
 	char c;
 	
+	OSIntEnter();
+	
 	if (USART_GetITStatus(USB_USART, USART_IT_RXNE) != RESET) {
-		USART_ClearFlag(USB_USART,USART_FLAG_ORE);  //¶Á SR
 		c = USART_ReceiveData(USB_USART);	
 		
 		if (uart1_recv_hook)
 			uart1_recv_hook(c);		
 	}
+	
+	OSIntExit();
 }
 
 void uart2_putc(char c)
@@ -63,13 +78,13 @@ void uart2_putc(char c)
 		USART_SendData(WIFI_USART, c);
 	}
 #endif
+
 }
 
 void uart1_putc(char c)
 {
 	while(USART_GetFlagStatus(USB_USART, USART_FLAG_TXE) == RESET);
-    USART_SendData(USB_USART, c);
-    
+    USART_SendData(USB_USART, c);   
 }
 
 void uart_puts(char *str)
@@ -80,6 +95,7 @@ void uart_puts(char *str)
        while(USART_GetFlagStatus(WIFI_USART, USART_FLAG_TXE) == RESET);
     }
 }
+
 
 static char uart2_recieve(void)
 {
@@ -115,6 +131,7 @@ void reset_buffer(void)
 void uart_inint(void)
 {
 	u32 bound = 115200;
+	OS_ERR err;
 	
 	GPIO_InitTypeDef GPIO_InitStructure;
 	USART_InitTypeDef USART_InitStructure;
@@ -170,10 +187,13 @@ void uart_inint(void)
 	
 	USART_Cmd(WIFI_USART, ENABLE);
 	USART_Init(WIFI_USART, &USART_InitStructure);
-	USART_ITConfig(WIFI_USART, USART_IT_RXNE, ENABLE); 
+	USART_ITConfig(WIFI_USART, USART_IT_RXNE , ENABLE); 
+	USART_ITConfig(WIFI_USART, USART_IT_IDLE , ENABLE); 
 	
 	uart1_recv_hook = uart2_putc;
 	uart2_recv_hook = uart1_putc;
 
+	OSSemCreate(&UartSem, "Test Sem", 0, &err);
+	
 	register_bus(uart2_send, uart2_recieve);
 }

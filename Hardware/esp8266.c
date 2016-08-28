@@ -21,12 +21,9 @@ s8 close_udp(u8 id);
 void bus_send_string(char *buf)
 {
 	u16 i;
-	CPU_SR_ALLOC();
 	
-	OS_CRITICAL_ENTER_CPU_CRITICAL_EXIT();
 	for (i = 0; buf[i] != '\0'; i++)
 		bus_send(&buf[i], 1);
-	OS_CRITICAL_EXIT();
 }
 
 void bus_recieve_string(char *buf)
@@ -270,7 +267,7 @@ void recv_data(u32 *ip, u16 *port, char *buf, u16 *buf_len)
 			msleep(20);
 			continue;
 		} else {
-			msleep(1);
+			msleep(20);
 			continue;
 		}
 		
@@ -339,7 +336,6 @@ s8 set_bound(void)
 	bus_recieve_string(output);
 	
 	return str_include(output, "OK");	
-
 }
 
 s8 esp_reset(void)
@@ -374,7 +370,6 @@ void send_test(void)
 	
 	recv_data(&ip, &src_port, data_i, &len);
 }
-
 
 void update_esp8266(void)
 {
@@ -435,7 +430,5 @@ void esp8266_gpio_init(void)
 	msleep(100);
 
 	//while (1)
-		//sleep(1);
-	
-	
+		//sleep(1);	
 }

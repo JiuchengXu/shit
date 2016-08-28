@@ -2,6 +2,7 @@
 #include "net.h"
 
 #ifdef GUN
+
 #define HOST_IP		(((u32)192 << 24) | ((u32)168 << 16) | ((u32)4 << 8) | 1)
 
 #define GUN_IP		(((u32)192 << 24) | ((u32)168 << 16) | ((u32)4 << 8) | 2)
@@ -33,10 +34,17 @@ static OS_TCB HBTaskStkTCB;
 
 static char recv_buf[1024];                                                    
 static u16 characCode;
-static s8 bulet;
 static s8 actived;
 
 #define INT2CHAR(x, i)	int2chars(x, i, sizeof(x))
+	
+extern s8 get_buletLeft(void);
+
+extern void set_buletLeft(s8 v);
+
+extern void add_buletLeft(s8 v);
+
+extern void reduce_bulet(void);
 
 static s8 sendto_host(char *buf, u16 len)
 {
@@ -69,35 +77,6 @@ static int active_request(void)
 static int get_deviceSubType(void)
 {
 	return 0;
-}
-
-static s8 get_buletLeft(void)
-{
-	return bulet;
-}
-
-static void set_buletLeft(s8 v)
-{
-	bulet = v;
-	if (bulet > 100)
-		bulet = 100;
-}
-
-static void add_buletLeft(s8 v)
-{
-	v += get_buletLeft();
-	set_buletLeft(v);
-}
-
-void reduce_bulet(void)
-{
-	if (bulet > 0)
-		bulet--;
-}
-
-static u8 get_power(void)
-{
-	return 100;
 }
 
 static int upload_status_data(void)
@@ -294,13 +273,6 @@ static void start_gun_tasks(void)
             (OS_ERR*)&err);
 }
 
-static s8 bulet_state_machine(void)
-{
-	if (get_buletLeft() <= 0)
-		return 1;
-	
-	return 0;
-}
 void main_loop(void)
 {
 	s8 status = INIT;
@@ -330,21 +302,7 @@ void main_loop(void)
 					
 				break;
 			case LIVE:
-				if (get_buletLeft() == 0)
-					status = DEAD;
-				else
-					status = SUPPLY;
-				
 				break;
-			case DEAD:
-				dead();
-				status = SUPPLY;
-			case SUPPLY:
-				if (bulet_state_machine())					
-					add_buletLeft(100);				
-
-				if (get_buletLeft() > 0)
-					status = LIVE;					
 		}
 		
 		msleep(200);

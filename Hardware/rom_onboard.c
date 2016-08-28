@@ -1,45 +1,32 @@
 #include "includes.h"
-#include "delay.h"
 #include "libe2prom.h"
-
 
 #define I2C                   I2C2
 
-#define AT24Cx_Address           0xa6 
+#define AT24Cx_Address           0xa0 
 #define AT24Cx_PageSize          8  
 
-struct eeprom_key_info {
-	char sn[16];
-	char user_id[16];
-	char ip_suffix[3];
-	char blod_def[3];
-	char menoy[3];
-};
+#define EEPROM1_WP				GPIOC
+#define EEPROM1_WP_Pin			GPIO_Pin_4
 
-enum {
-	KEY_UNINSERT = 0,
-	KEY_INSERTING,
-	KEY_INSERTED,
-	KEY_UNUSED,
-};
-
-static struct eeprom_key_info key;
-
-char eeprom[] = "SN145784541458720000018092719086250100100";
-
-void key_Reads(u8 Address, u8 *ReadBuffer, u16 ReadNumber)
+void at24c02_init(void)
 {
-	e2prom_Reads(I2C, AT24Cx_Address, Address, ReadBuffer, ReadNumber);
-}
-
-void key_Writes(u8 Address, u8 *WriteData, u16 WriteNumber)
-{
-	e2prom_Writes(I2C, AT24Cx_Address, Address, WriteData, WriteNumber);
+	GPIO_InitTypeDef GPIO_InitStructure;
+	
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE); 
+	
+	GPIO_InitStructure.GPIO_Pin    = EEPROM1_WP_Pin;
+	GPIO_InitStructure.GPIO_Speed  = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_Mode   = GPIO_Mode_Out_PP;
+	
+	GPIO_Init(GPIOC, &GPIO_InitStructure);
+	
+	GPIO_ResetBits(EEPROM1_WP, EEPROM1_WP_Pin);	
 }
 
 #if 0
 
-void key_Reads(u8 Address,u8 *ReadBuffer,u16 ReadNumber)
+void I2C_AT24Cx_Reads(u8 Address,u8 *ReadBuffer,u16 ReadNumber)
 {
 	if(ReadNumber==0)  
 		return;
@@ -105,7 +92,7 @@ static void I2C_AT24Cx_WaitForComplete(void)
 	I2C_GenerateSTOP(I2C, ENABLE);
 }
 
-void key_WriteByte(u8 Address,u8 WriteData)
+void I2C_AT24Cx_WriteByte(u8 Address,u8 WriteData)
 {
 
 	I2C_GenerateSTART(I2C, ENABLE);
@@ -129,7 +116,7 @@ void key_WriteByte(u8 Address,u8 WriteData)
 	I2C_AT24Cx_WaitForComplete();
 }
 
-void key_WritePage(u8 Address,u8 *WriteData,u16 WriteNumber)
+void I2C_AT24Cx_WritePage(u8 Address,u8 *WriteData,u16 WriteNumber)
 {
 	while(I2C_GetFlagStatus(I2C, I2C_FLAG_BUSY));
 
@@ -155,7 +142,7 @@ void key_WritePage(u8 Address,u8 *WriteData,u16 WriteNumber)
 	I2C_GenerateSTOP(I2C, ENABLE);
 }
 
-void key_Writes(u8 Address,u8 *WriteData,u16 WriteNumber)
+void I2C_AT24Cx_Writes(u8 Address,u8 *WriteData,u16 WriteNumber)
 {
 	u8 Temp;
 
@@ -164,7 +151,7 @@ void key_Writes(u8 Address,u8 *WriteData,u16 WriteNumber)
 	if(Temp)       
 	{
 		Temp=AT24Cx_PageSize-Temp;  
-		key_WritePage(Address,WriteData,Temp);
+		I2C_AT24Cx_WritePage(Address,WriteData,Temp);
 		Address+=Temp;
 		WriteData+=Temp;
 		WriteNumber-=Temp;
@@ -176,7 +163,7 @@ void key_Writes(u8 Address,u8 *WriteData,u16 WriteNumber)
 
 		if(WriteNumber>=AT24Cx_PageSize)
 		{
-			key_WritePage(Address,WriteData,AT24Cx_PageSize);
+			I2C_AT24Cx_WritePage(Address,WriteData,AT24Cx_PageSize);
 			Address+=AT24Cx_PageSize;
 			WriteData+=AT24Cx_PageSize;
 			WriteNumber-=AT24Cx_PageSize;
@@ -185,107 +172,30 @@ void key_Writes(u8 Address,u8 *WriteData,u16 WriteNumber)
 
 		else
 		{
-			key_WritePage(Address,WriteData,WriteNumber);
+			I2C_AT24Cx_WritePage(Address,WriteData,WriteNumber);
 			WriteNumber=0;
 			I2C_AT24Cx_WaitForComplete();
 		}
 	}
 }
 
-void key_test(void)
+#endif
+
+void I2C_AT24Cx_Reads(u8 Address, u8 *ReadBuffer, u16 ReadNumber)
+{
+	e2prom_Reads(I2C, AT24Cx_Address, Address, ReadBuffer, ReadNumber);
+}
+
+void I2C_AT24Cx_Writes(u8 Address,u8 *WriteData,u16 WriteNumber)
+{
+	e2prom_Writes(I2C, AT24Cx_Address, Address, WriteData, WriteNumber);
+}
+
+void AT24Cxx_test(void)
 {
 	char a[]="abcdefghijklmnopqstuvwxyz0123456789";
 	
-	key_Writes(0, (u8 *)a, sizeof(a));
+	I2C_AT24Cx_Writes(0, (u8 *)a, sizeof(a));
 	memset(a, 0, sizeof(a));
-	key_Reads(0, (u8 *)a, sizeof(a));
-}
-
-#endif
-
-void read_key_from_eeprom(void)
-{
-	struct eeprom_key_info tmp_key;
-	
-	memcpy(&key, eeprom, strlen(eeprom));
-	return;
-	
-	key_Reads(0, (u8 *)&key, sizeof(tmp_key));
-	tmp_key = key;
-	
-	int2chars(tmp_key.blod_def, 0, sizeof(tmp_key.blod_def));
-	
-	key_Writes(0, (u8 *)&tmp_key, sizeof(tmp_key));
-}
-
-void get_key_sn(char *s)
-{
-	memcpy(s, key.sn, 16);
-}
-
-void get_ip_suffix(char *s)
-{
-	memcpy(s, key.ip_suffix, 3);
-}
-
-s8 get_key_blod(void)
-{
-	return char2u32(key.blod_def, sizeof(key.blod_def));	
-}
-
-s8 get_key_gpio(void)
-{	
-	//return GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0) == Bit_RESET;
-	return 1;
-}
-
-static s8 status = KEY_UNINSERT;
-
-s8 key_state_machine(void)
-{
-	s8 ret = 0;
-	
-	switch (status) {
-		case KEY_UNINSERT:
-			if (get_key_gpio())
-				status = KEY_INSERTING;
-			break;
-			
-		case KEY_INSERTING:
-			if (get_key_gpio())
-				status = KEY_INSERTED;
-			break;
-			
-		case KEY_INSERTED:
-			read_key_from_eeprom();
-			status = KEY_UNUSED;
-			ret = 1;
-			// fall through
-		case KEY_UNUSED:
-			if (get_key_gpio() == 0)
-				status = KEY_UNINSERT;
-			break;
-	}
-	
-	return ret;
-}
-
-void key_init(void)
-{
-	GPIO_InitTypeDef GPIO_InitStructure;
-	
- 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
-
-	GPIO_InitStructure.GPIO_Pin  = GPIO_Pin_0;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING; 
- 	GPIO_Init(GPIOA, &GPIO_InitStructure);	
-}
-
-void key_test(void)
-{
-	char a[]="SN145784541458720000018092719086250100100";
-	
-	key_Writes(0, (u8 *)a, sizeof(a));
-	memset(a, 0, sizeof(a));
-	key_Reads(0, (u8 *)a, sizeof(a));
+	I2C_AT24Cx_Reads(0, (u8 *)a, sizeof(a));
 }

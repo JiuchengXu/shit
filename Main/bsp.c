@@ -391,7 +391,9 @@ extern void adx345_init(void);
 extern void wav_play(void);
 extern void wav_pre_read(void);
 extern void led_38k_test(void);
-
+extern void key_init(void);
+extern void timer_init(void);
+extern void irda_init(void);
 
 void  BSP_Init (void)
 {	
@@ -399,15 +401,25 @@ void  BSP_Init (void)
 	uart_inint();
 	esp8266_gpio_init();
 	i2c_init();
-	at24c02_init();
 	SPI3_init();
+	
+	at24c02_init();
+	key_init();		
 	beep_init();
+	
 	//adx345_init();
+	
+#ifdef CLOTHE
+	timer_init();
+	irda_init();
+#endif
 
 #ifdef GUN
 	led_38k_init();
 	I2S_Bus_Init();
 	wav_pre_read();
+	bulet_box_init();
+	trigger_init();
 #endif
 	
 }

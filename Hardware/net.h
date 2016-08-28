@@ -21,6 +21,7 @@ void recv_data(u32 *ip, u16 *port, char *buf, u16 *buf_len);
 s8 udp_close(u8 id); 
 s8 key_state_machine(void);
 s8 get_key_blod(void);
+s8 get_power(void);
 
 #define ACTIVE_REQUEST_TYPE		0
 #define ACTIVE_RESPONSE_TYPE	1
@@ -114,6 +115,6 @@ void flash_bytes_read(u32 addr, u8 *buf, u16 len);
 void flash_page_write(uint32_t page, uint8_t *data);
 
 void set_time(char *s, s8 len);
-u64 get_time(void);
+u32 get_time(void);
 
 #endif
